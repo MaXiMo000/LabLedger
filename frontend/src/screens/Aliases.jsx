@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, messageFor } from "../api/client";
 import Modal from "../components/Modal";
 import "./Aliases.css";
@@ -22,11 +22,23 @@ import "./Aliases.css";
 
 function LoincPicker({ onPick, busy }) {
   const [query, setQuery] = useState("");
+  // Searched a beat after typing stops, not on every keystroke. The query is a
+  // regex walk over 58k rows — cheap enough to feel instant when it runs, and
+  // not something to run five times on the way to a word.
+  const [settled, setSettled] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(query), 220);
+    return () => clearTimeout(t);
+  }, [query]);
+
   const { data: hits = [], isFetching } = useQuery({
-    queryKey: ["loinc-search", query],
+    queryKey: ["loinc-search", settled],
     queryFn: async () =>
-      (await api.get("/review/loinc/search", { params: { q: query } })).data,
-    enabled: query.trim().length >= 3,
+      (await api.get("/review/loinc/search", { params: { q: settled } })).data,
+    enabled: settled.trim().length >= 3,
+    // Results for a given string do not change while the dialog is open.
+    staleTime: 5 * 60_000,
   });
 
   return (

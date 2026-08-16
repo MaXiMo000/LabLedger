@@ -182,3 +182,61 @@ async def test_search_reaches_codes_the_cascade_would_never_auto_match(client):
 
 async def test_search_requires_auth(client):
     assert (await client.get("/api/review/loinc/search?q=ferritin")).status_code == 401
+
+
+async def test_search_matches_partial_words(client):
+    """Typing towards a name must get better, not worse.
+
+    `$text` matched whole words only, so every one of these returned either
+    nothing relevant or -- for "hema" -- the entries whose synonym blob happens
+    to contain that exact token, which is a set of F8 gene mutation panels. On
+    the screen where a human corrects the machine, a search that cannot surface
+    the obvious answer pushes people towards accepting the cascade's guess.
+
+    Each of these is the top hit, not merely present: being on page one of a
+    twenty-row list is not the same as being found.
+    """
+    h, _, _ = await setup_doc(client)
+    expected = {
+        "ferr": "2276-4",       # Ferritin
+        "thyro": "3016-3",      # Thyrotropin
+        "tsh": "3016-3",        # by synonym rather than by display name
+        "creat": "2160-0",      # Creatinine
+        "ldl": "13457-7",       # Cholesterol in LDL
+        "hematocr": "4544-3",   # Hematocrit
+    }
+    for q, code in expected.items():
+        hits = (await client.get(f"/api/review/loinc/search?q={q}", headers=h)).json()
+        assert hits, f"{q!r} found nothing"
+        assert hits[0]["loinc_code"] == code, (
+            f"{q!r} -> {hits[0]['loinc_code']} ({hits[0]['display']}), expected {code}"
+        )
+
+
+async def test_every_word_typed_narrows_the_search(client):
+    """Tokens are ANDed. A search that widened as the user said more would get
+    less useful the more they told it."""
+    h, _, _ = await setup_doc(client)
+
+    both = (await client.get("/api/review/loinc/search?q=glucose+urine", headers=h)).json()
+    assert both
+    assert both[0]["loinc_code"] == "5792-7"        # Glucose, urine, test strip
+    # Serum glucose matches "glucose" but not "urine", so it must be absent.
+    assert all(x["loinc_code"] != "2345-7" for x in both)
+
+    one = (await client.get("/api/review/loinc/search?q=glucose", headers=h)).json()
+    assert len(one) >= len(both)
+
+
+async def test_search_ranks_by_how_commonly_a_test_is_ordered(client):
+    """Rank 0 means "never observed in the frequency survey", not "most
+    common" — so those come last, after everything with a real rank."""
+    h, _, _ = await setup_doc(client)
+    hits = (await client.get("/api/review/loinc/search?q=ferr&limit=50", headers=h)).json()
+
+    ranks = [x["common_rank"] for x in hits]
+    ranked = [r for r in ranks if r > 0]
+    assert ranked == sorted(ranked), f"ranked hits out of order: {ranked}"
+    # Nothing with a real rank may appear after an unranked one.
+    if 0 in ranks:
+        assert all(r == 0 for r in ranks[ranks.index(0):])

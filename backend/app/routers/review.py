@@ -6,6 +6,7 @@ the loop that makes the system converge: the LLM's share of rows falls every
 time the queue is worked.
 """
 
+import re
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -312,24 +313,75 @@ async def queue(
     return items
 
 
+# A token matches at the start of a word, not anywhere inside one. "hb" should
+# find Haemoglobin, not every code with an h and a b somewhere in its synonyms.
+_WORD_START = r"(?:^|[\s,\(\)\[\]/.&+-])"
+
+
+def _prefix_clause(q: str) -> dict | None:
+    """Match every whitespace-separated token as a word-prefix of the blob.
+
+    AND rather than OR: "glucose urine" means both, and a search that widened
+    with each word typed would get less useful the more the user told it.
+    """
+    tokens = [t for t in q.lower().split() if t]
+    if not tokens:
+        return None
+    return {"$and": [
+        {"search_blob": {"$regex": _WORD_START + re.escape(t)}} for t in tokens
+    ]}
+
+
 @router.get("/loinc/search", response_model=list[SearchHit])
 async def search(
     q: str = Query(min_length=2, max_length=80),
     limit: int = Query(default=20, ge=1, le=50),
     _user: User = Depends(current_user),
 ):
-    """Search the whole LOINC table by name.
+    """Search the whole LOINC table by name, matching partial words.
 
     Deliberately not restricted to `auto_matchable`: the 40k codes the cascade
     will never auto-match must still be reachable here, or a rare-but-real test
     would be unresolvable even by a human -- which would make the review queue
     a dead end rather than a backstop.
+
+    **Prefixes, not whole words.** This used Mongo's `$text` index, which only
+    matches complete words: typing "hema" never reached Haematocrit and instead
+    surfaced the handful of entries whose synonym blob literally contains the
+    token "hema" -- F8 gene mutation panels. Someone typing towards a name they
+    can see got worse answers the closer they got, on the one screen where a
+    human corrects the machine. A correction dialog that cannot surface the
+    right code pushes people towards accepting whatever the cascade guessed,
+    which is the failure the review queue exists to catch.
+
+    **Ranked by walking the index, not by sorting the results.** The previous
+    version applied `limit` and *then* sorted, so the twenty rows it ranked were
+    an arbitrary twenty. Sorting on `common_rank` inside the query makes Mongo
+    walk that index and stop as soon as it has enough, which both fixes the
+    ranking and is what keeps a regex over 58k documents affordable -- commonly
+    ordered tests are found early and the scan ends.
+
+    Rank 0 means "never observed in the frequency survey", not "most common", so
+    those are a separate second pass rather than the front of the first.
+
+    ponytail: regex cannot use an index, so latency scales with how far the walk
+    goes before finding `limit` matches -- typically under 200ms, worse for a
+    two-letter query that matches little. A prefix-token array field with its own
+    index is the fix if this ever gets slow enough to notice.
     """
+    clause = _prefix_clause(q)
+    if clause is None:
+        return []
+
     hits = await LoincEntry.find(
-        {"$text": {"$search": q}}
+        {"$and": [clause, {"common_rank": {"$gt": 0}}]}
     ).sort("+common_rank").limit(limit).to_list()
-    # Unranked codes sort last: rank 0 means "never seen in the wild".
-    hits.sort(key=lambda e: (e.common_rank == 0, e.common_rank or 10**9))
+
+    if len(hits) < limit:
+        hits += await LoincEntry.find(
+            {"$and": [clause, {"common_rank": 0}]}
+        ).limit(limit - len(hits)).to_list()
+
     return [
         SearchHit(
             loinc_code=e.loinc_num,

@@ -110,8 +110,10 @@ receives it.
 ## Deploying to Render
 
 [render.yaml](render.yaml) is a blueprint: **New → Blueprint → this repo.** It
-creates the API, the worker, a Redis instance and the static frontend, and
-prompts once for the secrets marked `sync: false`.
+creates the API, a Key Value instance and the static frontend, and prompts
+once for the eleven secrets marked `sync: false`. **There is no worker
+service** — Render has no Free instance type for one, so the API runs arq
+in-process; see *Deployed* above.
 
 **Paste these when prompted** (from `backend/.env`): `MONGO_URI`,
 `FIELD_ENCRYPTION_KEY`, `GEMINI_API_KEY`, `GOOGLE_CLIENT_ID`,
@@ -120,9 +122,8 @@ prompts once for the secrets marked `sync: false`.
 
 Three things that are not obvious:
 
-- **`FIELD_ENCRYPTION_KEY` must be the same value as dev**, and the same on the
-  API *and* the worker. It is not generated, because anything already encrypted
-  is unreadable without it and the worker decrypts PDFs to extract them. A
+- **`FIELD_ENCRYPTION_KEY` must be the same value as dev.** It is not
+  generated, because anything already encrypted is unreadable without it. A
   mismatch shows up as every document failing.
 - **The frontend proxies `/api` to the backend; it does not call it
   cross-origin.** The refresh cookie is httpOnly, SameSite=lax, scoped to
@@ -131,11 +132,13 @@ Three things that are not obvious:
   fail every refresh. The rewrite in `render.yaml` keeps one origin, exactly as
   the Vite proxy does locally. Changing that means changing the session model
   too (SameSite=none, Secure, CORS with credentials).
-- **`GOOGLE_CALLBACK_URL` must be registered in Google Cloud Console**, exactly.
-  After the first deploy it is `https://labledger-api.onrender.com/api/auth/google/callback`
-  — add it under the OAuth client's Authorised redirect URIs, or Google sign-in
-  returns `error=oauth`. The rewrite destination in `render.yaml` also assumes
-  that hostname; if Render assigns a different one, update both.
+- **`GOOGLE_CALLBACK_URL` sits on the *frontend* origin**, not the API's:
+  `https://labledger-web.onrender.com/api/auth/google/callback`, registered in
+  Google Cloud Console exactly. The sign-in button is a relative link, so the
+  browser is on the frontend when SessionMiddleware stores the OAuth state
+  cookie; a callback on the API host is a different site and never receives it,
+  and the user lands on `?error=oauth`. The rewrite destination in `render.yaml`
+  assumes the API hostname; if Render assigns different names, update both.
 
 Free-tier services sleep after inactivity: the first request after a while
 takes ~30s, and the worker only processes uploads while it is awake.
@@ -374,24 +377,28 @@ Ordered by what the system is currently worst at, not by what is most fun. Each
 says why it matters and what "done" looks like, so a session can start on one
 without re-deriving the case for it.
 
-### 1. LOINC search ranking — the highest-value fix on this list
+### 1. ~~LOINC search~~ — done
 
-Typing `hema` into the correction dialog returns **F8 gene mutation panels**,
-not haematocrit or haemoglobin. Confirmed by eye. The search is substring
-matching with no relevance ordering, so a nine-word molecular genetics name
-containing the letters outranks the two-word test the person is obviously
-looking for.
+Left here because the diagnosis in it was wrong in a way worth remembering.
 
-This is not cosmetic. `/app/review/learned` is where a human corrects the
-machine, and a correction screen that cannot surface the right answer pushes
-people towards accepting whatever the cascade guessed — which is precisely the
-failure the review queue exists to catch, reintroduced at the point of repair.
+It looked like a ranking failure: `hema` returned F8 gene mutation panels. The
+ranking was fine. Mongo's `$text` index matches **whole words only**, so `hema`
+never matched Haematocrit at all, and the F8 rows came back because their
+synonym blob literally contains the token "hema". Full words always worked —
+`ferritin`, `tsh`, `hematocrit` each ranked correctly. What was missing was
+prefix matching, which is what someone typing towards a name is doing.
 
-**Done looks like:** exact and prefix matches on `COMPONENT` first, then whole-
-word matches, then substring; shorter names break ties; the analytes the unit
-table knows about rank above those it does not. `scripts/bench_llm_hard.py` is
-the model for how to prove it — a fixture of real printed names with the code a
-human would pick, and a score that has to go up.
+Now: whitespace tokens ANDed, each matched as a word-prefix, ordered by walking
+the `common_rank` index so Mongo stops as soon as it has enough. That last part
+is what keeps a regex over 58k rows affordable *and* fixes a second bug — the
+old code applied `limit` and then sorted, so the twenty rows it ranked were an
+arbitrary twenty. Rank 0 means "never observed", so it is a separate second
+pass rather than the front of the first. The client debounces 220ms.
+
+**The lesson:** the symptom named the wrong cause, and only measuring the
+endpoint directly separated them. `scripts/` has no bench for search; the tests
+in `test_review.py` pin top hits instead, which is the cheaper version of the
+same discipline.
 
 ### 2. Panel grouping for the review queue and reports
 
