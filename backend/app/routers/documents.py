@@ -14,6 +14,7 @@ from app.models.document import DocStatus, LabDocument
 from app.models.observation import Observation
 from app.models.user import User
 from app.security import decrypt_field, encrypt_field
+from app.throttle import guard_queue_depth
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -92,6 +93,9 @@ async def upload(
 ):
     """Accept a PDF for one patient, store it encrypted, and queue it."""
     patient = await access.require(user, patient_id, access.CAN_UPLOAD)
+    # Checked before the body is read: refusing a 25 MB upload after receiving
+    # it spends the bandwidth anyway.
+    await guard_queue_depth(user)
     data = await file.read()
 
     if not data:
@@ -173,9 +177,17 @@ async def get_file(document_id: str, user: User = Depends(current_user)):
 
 
 @router.post("/item/{document_id}/reprocess", response_model=DocumentOut)
+@limiter.limit("30/hour")
 async def reprocess(request: Request, document_id: str, user: User = Depends(current_user)):
-    """Re-queue a document, replacing its rows rather than duplicating them."""
+    """Re-queue a document, replacing its rows rather than duplicating them.
+
+    Limited exactly as `upload` is, and it was not. This queues the same
+    extraction job for less effort than uploading does — no file body, just an
+    id — so it was the cheaper way to load the worker, and on Render that worker
+    shares a process with the API.
+    """
     doc = await repo.get_document(user, document_id, access.CAN_UPLOAD)
+    await guard_queue_depth(user)
     doc.status, doc.error = "queued", None
     await doc.save()
     await record("reprocess", "document", doc.id, patient_id=doc.patient_id)

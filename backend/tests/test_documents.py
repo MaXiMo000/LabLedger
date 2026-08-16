@@ -1,8 +1,10 @@
+import uuid
 from pathlib import Path
 
 import pytest
 from beanie import PydanticObjectId
 
+from app import throttle
 from app.config import settings
 from app.models.document import LabDocument
 from app.models.observation import Observation
@@ -11,8 +13,25 @@ from app.worker import process_document
 
 pytestmark = pytest.mark.asyncio
 
+
+def _unique_pdf() -> bytes:
+    """A distinct valid PDF each call: identical bytes are deduplicated by
+    sha256 and would return the first document instead of queueing new work."""
+    import uuid
+    return PDF.replace(b"%PDF-1.4", b"%PDF-1.4", 1) + b"\n% " + uuid.uuid4().hex.encode()
+
 FIXTURES = Path(__file__).parent / "fixtures"
 PDF = (FIXTURES / "quest_style.pdf").read_bytes()
+
+
+def _unique_pdf() -> bytes:
+    """A distinct valid PDF each call.
+
+    Identical bytes are deduplicated by sha256 and return the existing document
+    instead of queueing new work — which is correct behaviour, and would make
+    these tests pass without the guard doing anything.
+    """
+    return PDF + b"\n% " + uuid.uuid4().hex.encode()
 
 
 async def account(client, email="doc@example.com"):
@@ -164,3 +183,57 @@ async def test_malformed_pdf_fails_gracefully(client):
     assert await process_document({}, doc_id) == "failed"
     body = (await client.get(f"/api/documents/item/{doc_id}", headers=h)).json()
     assert body["status"] == "failed" and body["error"]
+
+
+# --- bounding the most expensive thing this system does ---------------------
+
+async def test_a_backlog_of_work_refuses_more(client, account):
+    """Extraction is the costly path, and on Render the worker shares a process
+    with the API — so saturating the queue takes the API down, not just the
+    bill up. Bounded by work in flight rather than by requests per hour: what
+    needs limiting is how much is running at once, and the documents collection
+    already knows that."""
+    h, pid = account
+    for _ in range(throttle.MAX_IN_FLIGHT):
+        r = await client.post(f"/api/documents/{pid}", headers=h,
+                              files={"file": ("q.pdf", _unique_pdf(), "application/pdf")})
+        assert r.status_code == 202, r.text
+
+    r = await client.post(f"/api/documents/{pid}", headers=h,
+                          files={"file": ("more.pdf", _unique_pdf(), "application/pdf")})
+    assert r.status_code == 429
+    assert "still being processed" in r.json()["detail"]
+
+
+async def test_finishing_the_work_frees_the_queue_again(client, account):
+    """Steady use is never punished: the block lifts as the backlog drains, so
+    somebody working through a folder waits only for what is already running."""
+    h, pid = account
+    for _ in range(throttle.MAX_IN_FLIGHT):
+        await client.post(f"/api/documents/{pid}", headers=h,
+                          files={"file": ("q.pdf", _unique_pdf(), "application/pdf")})
+    assert (await client.post(f"/api/documents/{pid}", headers=h,
+            files={"file": ("x.pdf", _unique_pdf(), "application/pdf")})).status_code == 429
+
+    await LabDocument.find(LabDocument.status == "queued").update({"$set": {"status": "done"}})
+
+    r = await client.post(f"/api/documents/{pid}", headers=h,
+                          files={"file": ("y.pdf", _unique_pdf(), "application/pdf")})
+    assert r.status_code == 202
+
+
+async def test_reprocess_is_bounded_too(client, account):
+    """It queues the same job for less effort than uploading -- no file body,
+    just an id -- so it was the cheaper way to load the worker."""
+    h, pid = account
+    doc_id = (await client.post(f"/api/documents/{pid}", headers=h,
+              files={"file": ("q.pdf", _unique_pdf(), "application/pdf")})).json()["id"]
+    await LabDocument.find(LabDocument.status == "queued").update({"$set": {"status": "done"}})
+
+    # Fill the queue with other work, then try to add to it by reprocessing.
+    for _ in range(throttle.MAX_IN_FLIGHT):
+        await client.post(f"/api/documents/{pid}", headers=h,
+                          files={"file": ("f.pdf", _unique_pdf(), "application/pdf")})
+
+    r = await client.post(f"/api/documents/item/{doc_id}/reprocess", headers=h)
+    assert r.status_code == 429

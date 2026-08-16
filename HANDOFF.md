@@ -480,9 +480,20 @@ structurally sound and in the right unit.
 
 ### 5. Hardening, in rough order of exposure
 
-- **Rate-limit the upload endpoint.** Extraction is the most expensive thing
-  here and the only unmetered path to it. A free instance with an in-process
-  worker makes this a way to take the API down, not just to run up a bill.
+- ~~**Rate-limit the upload endpoint.**~~ Done — and the entry was wrong. Upload
+  already carried `@limiter.limit("30/hour")`; **`/reprocess` carried nothing**,
+  and it queues the same extraction job for less effort — no file body, just an
+  id. That was the cheap way to load the worker, and on Render the worker shares
+  a process with the API.
+
+  Both now also pass `throttle.guard_queue_depth`, a **concurrency cap rather
+  than a rate limit**: what needs bounding is how much work is in flight, and
+  the documents collection already knows that — `queued`/`extracting`/`mapping`
+  rows *are* the queue. No new collection, no counters to keep in step, no
+  window to expire, and steady use is never punished because the block lifts as
+  the backlog drains. Per-account, because the per-IP limiter buckets by
+  address and anything spread over a few hosts walks past it — the same
+  argument `throttle.py` already makes about codes.
 - **Cap total stored bytes per account.** 25 MB per file, unlimited files.
 - **A retention policy that does something.** Documents are kept forever;
   `ARCHITECTURE.md` lists retention as out of scope, which is honest but is also

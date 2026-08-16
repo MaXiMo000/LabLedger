@@ -59,3 +59,42 @@ async def clear_code_failures(user: User) -> None:
         user.code_failures = 0
         user.code_locked_until = None
         await user.save()
+
+
+# --- extraction work in flight ----------------------------------------------
+
+# Extraction is the most expensive thing this system does, and both paths to it
+# — uploading and reprocessing — enqueue the same job. On Render the worker runs
+# *inside* the API process (`RUN_WORKER_IN_API`), so saturating the queue does
+# not just run up a bill: it competes with request handling on the same event
+# loop and takes the API down with it.
+#
+# The per-IP limiter in `routers/documents.py` is the first line and the weaker
+# one, for the reason at the top of this file — it buckets by address. This
+# counts against the account, which is what the work is done on behalf of.
+#
+# **A concurrency cap, not a rate limit.** What needs bounding is how much work
+# is in flight at once, and that is a thing the database already knows: a
+# document sitting in `queued`, `extracting` or `mapping` *is* the queued work.
+# Counting rows needs no new collection, no counters to keep in step and no
+# window to expire. It also never punishes steady use — somebody working
+# through a folder of reports is only ever blocked while the previous ones are
+# still running, which is the honest answer to "why is this slow" anyway.
+IN_FLIGHT = ("queued", "extracting", "mapping")
+MAX_IN_FLIGHT = 5
+
+
+async def guard_queue_depth(user) -> None:
+    """Refuse to queue more extraction while this account already has plenty."""
+    from app.models.document import LabDocument
+
+    depth = await LabDocument.find(
+        LabDocument.uploaded_by == user.id,
+        {"status": {"$in": list(IN_FLIGHT)}},
+    ).count()
+    if depth >= MAX_IN_FLIGHT:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"{depth} of your documents are still being processed. "
+            "They will finish on their own — try again in a minute.",
+        )
