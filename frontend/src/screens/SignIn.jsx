@@ -172,8 +172,10 @@ export default function SignIn() {
             <p className="signin__switch">
               {forgot === "sent" ? (
                 <span className="field__hint">
-                  If that address has an account with a password, a reset link
-                  is on its way. It expires in 30 minutes.
+                  If that address has an account, a reset link is on its way.
+                  It expires in 30 minutes. This works for accounts created
+                  through Google too — it adds a password rather than
+                  replacing the Google sign-in.
                 </span>
               ) : (
                 <button

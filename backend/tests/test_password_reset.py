@@ -68,9 +68,14 @@ async def test_an_unknown_address_answers_identically(client, sent):
     assert len(sent) == 1  # only the real one actually sent
 
 
-async def test_a_google_only_account_gets_no_link(client, sent):
-    """There is no password to reset, and mailing a link that sets one would
-    let anybody with mailbox access add a second way in past Google."""
+async def test_a_google_only_account_can_add_a_password(client, sent):
+    """Signing up through Google must not be a one-way door.
+
+    The link is sent even with no password on the account, which is how
+    somebody moves off the identity provider without losing the record. The
+    cost is that mailbox control now reaches an account it previously did not,
+    which is why the second factor survives the reset — see the MFA test below.
+    """
     await register(client)
     user = await User.find_one(User.email == "a@example.com")
     user.password_hash = None
@@ -78,7 +83,13 @@ async def test_a_google_only_account_gets_no_link(client, sent):
 
     r = await client.post("/api/auth/password/reset", json={"email": "a@example.com"})
     assert r.status_code == 204
-    assert sent == []
+    assert len(sent) == 1
+
+    # And the link actually sets one, rather than merely being delivered.
+    await client.post("/api/auth/password/reset/confirm",
+                      json={"token": token_from(sent[0][1]), "new_password": NEW})
+    user = await User.find_one(User.email == "a@example.com")
+    assert user.password_hash and verify_password(NEW, user.password_hash)
 
 
 async def test_the_token_is_hashed_at_rest(client, sent):

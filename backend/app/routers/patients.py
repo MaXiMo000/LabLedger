@@ -307,6 +307,12 @@ class InviteOut(BaseModel):
     invited_at: datetime
     expires_at: datetime
     link: str | None = None
+    # Whether the invitation email actually went, at creation. None on the
+    # listing, where the question is not being asked. The link is returned
+    # either way — the send is best-effort and the owner needs something to
+    # pass on by hand when it fails — but telling them *which* happened is the
+    # difference between "also send this yourself" and "already on its way".
+    emailed: bool | None = None
 
 
 @router.post("/{patient_id}/invites", response_model=InviteOut,
@@ -314,10 +320,11 @@ class InviteOut(BaseModel):
 async def invite(patient_id: str, body: InviteIn, user: User = Depends(current_user)):
     """Create an invitation link for an address with no account.
 
-    The link is returned once and never stored in the clear, so it has to be
-    passed to the person by whatever channel the ward already trusts. This
-    system sends no mail, and a link that could be re-read from the invitation
-    list would be a standing key sitting next to the door it opens.
+    The link is returned once and never stored in the clear: a link that could
+    be re-read from the invitation list would be a standing key sitting next to
+    the door it opens. It is also emailed when mail is configured, and
+    `emailed` says whether that worked — the send is best-effort, so the owner
+    still needs the copy in hand when it did not.
     """
     patient = await access.require(user, patient_id, access.CAN_MANAGE)
     email = body.email.lower()
@@ -347,7 +354,7 @@ async def invite(patient_id: str, body: InviteIn, user: User = Depends(current_u
     # Sent *and* returned. The link is the only copy, so if the send fails the
     # owner still has something to pass on by hand rather than an invitation
     # that exists but can never be delivered.
-    await mailer.send_invitation(
+    emailed = await mailer.send_invitation(
         to_email=email, inviter_email=user.email, role=row.role,
         invite_url=f"{settings.frontend_url}/invite/{token}",
         expires_on=row.expires_at.strftime("%d %B %Y"),
@@ -358,6 +365,7 @@ async def invite(patient_id: str, body: InviteIn, user: User = Depends(current_u
         id=str(row.id), email=row.email, role=row.role,
         invited_at=row.created_at, expires_at=row.expires_at,
         link=f"{settings.frontend_url}/invite/{token}",
+        emailed=emailed,
     )
 
 

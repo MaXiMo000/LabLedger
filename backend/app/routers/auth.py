@@ -561,7 +561,7 @@ async def request_password_reset(
     request: Request,  # noqa: ARG001 - slowapi requires `request` in the signature
     body: ResetRequestIn,
 ):
-    """Send a reset link, if that address has an account with a password.
+    """Send a reset link to any account with this address.
 
     **Always 204**, whatever is true. Answering differently for a registered
     address turns this endpoint into a way to enumerate who has an account
@@ -569,12 +569,17 @@ async def request_password_reset(
     person is a patient somewhere. The rate limit is the compensating control,
     since silence means a guesser learns nothing per attempt.
 
-    A Google-only account gets nothing: there is no password to reset, and
-    sending a link that sets one would let anybody with mailbox access add a
-    second way in past the identity provider.
+    **A Google-only account is included**, so somebody who signed up through
+    Google can add a password and stop depending on it. This is a deliberate
+    loosening, and it has a cost worth stating plainly: it makes control of the
+    mailbox sufficient to set a password on an account that previously required
+    the identity provider, whatever protections that provider had on it. What
+    stands behind it afterwards is the second factor, which `confirm` leaves
+    enrolled precisely so a mailbox alone is never the whole of an identity.
+    Signing in with Google keeps working — a password is added, not swapped in.
     """
     user = await User.find_one(User.email == body.email.lower())
-    if user is None or user.password_hash is None:
+    if user is None:
         return
 
     token, token_hash = new_refresh_token()

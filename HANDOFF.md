@@ -15,11 +15,16 @@ for what the product does and [ARCHITECTURE.md](ARCHITECTURE.md) for how.
 
 ## Do these first
 
-| # | What | Why it is blocked on you |
-|---|---|---|
-| 1 | **EmailJS → Account → Security → allow API access from non-browser environments** | Server-side sending is currently refused: `403 API access from non-browser environments is currently disabled`. Nothing sends until this is on. |
-| 2 | **Rotate the EmailJS keys** | Public *and* private keys were shared in a screenshot during development. Refresh Keys, then update `backend/.env` and Render. |
-| 3 | **Fix three wrong aliases** on `ritishsaini1995@gmail.com` | `/app/review/learned` → Correct. `FERRTN SER`→Ferritin `2276-4`, `HCT`→Hematocrit `4544-3`, `VIT B-12`→Cobalamin `2132-9`. They are confirmed-wrong and currently decide real results. I did not touch your clinical data. |
+Nothing. The three that were here are done: the EmailJS non-browser API is
+enabled, the leaked keys are rotated, and the three wrong aliases on
+`ritishsaini1995@gmail.com` were corrected through `/app/review/learned` — so
+the results they had mis-coded were re-coded too, not just the rules.
+
+**Mail is verified working end to end.** EmailJS returned 200 on a live reset
+and a live invitation. If it stops, check the obvious thing first: `.env`
+changes do not restart `uvicorn --reload`, which watches `.py` only. A process
+started before a key rotation keeps using the revoked keys and every send fails
+silently, because a failed send never fails the operation it belongs to.
 
 ---
 
@@ -128,6 +133,12 @@ its link is still returned; the reset still answers 204. Losing an email is bad;
 a 500 on the reset endpoint would tell an attacker which addresses are
 registered.
 
+**The invitation says which of those happened.** `InviteOut.emailed` carries
+the send result, and the screen reads "Emailed to them" or "the email could not
+be sent" accordingly. The link is shown either way — a silent failure whose
+only copy of the link was never displayed leaves an invitation that exists and
+can never be delivered.
+
 ---
 
 ## Decisions that must not be re-litigated
@@ -214,6 +225,16 @@ would be an account takeover.
 somebody does when they have lost control; leaving sessions alive hands the new
 password to a stranger. It proves control of a mailbox, which is exactly what
 MFA exists to not be sufficient on its own.
+
+**A Google-only account can reset too — deliberately reversed.** It used to be
+refused, on the grounds that mailing a link which *sets* a password lets anyone
+with mailbox access past the identity provider. That is still true and is the
+price: signing up through Google can no longer be a one-way door, so control of
+the mailbox now reaches an account that previously required Google. The
+password is *added*, not swapped in — Google sign-in keeps working — and the
+second factor surviving the reset is what stands behind it. If this is ever
+reconsidered, reconsider it against that, not against the enumeration rule,
+which is untouched: the endpoint still always answers 204.
 
 **A replayed refresh token ends the session for everybody.** `previous_hash`
 remembers one step back. Inside `ROTATION_GRACE` (10s) it is two tabs racing on

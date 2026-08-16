@@ -370,10 +370,16 @@ function AccessList({ patientId }) {
       {link && (
         <div className="rec__offer rec__offer--link">
           <h3 className="rec__sub">Invitation for {link.email}</h3>
+          {/* The link is shown either way. A send that failed silently, with
+              the only copy of the link never displayed, would leave an
+              invitation that exists and can never be delivered. */}
           <p>
-            Send this link to them yourself — LabLedger does not send mail. It
-            works once, expires {new Date(link.expires_at).toLocaleDateString()},
-            and only for that address.
+            {link.emailed
+              ? "Emailed to them. Here is the link as well, in case it does not arrive."
+              : "Send this link to them yourself — the email could not be sent."}{" "}
+            It works once, expires{" "}
+            {new Date(link.expires_at).toLocaleDateString()}, and only for that
+            address.
           </p>
           <div className="rec__linkrow">
             <input className="field__input num" value={link.link} readOnly
