@@ -8,7 +8,8 @@ for what the product does and [ARCHITECTURE.md](ARCHITECTURE.md) for how.
 > session that wrote most of what follows, before the first git commit, and
 > could not be recovered — not in the index, no commits, no loose objects. What
 > is here was rebuilt from that session. Phase 1–6 detail is thinner than it
-> was. **Commit early**; there was no floor under any of this until now.
+> was. The repository now has commits, so there is a floor under it; there was
+> none while the above happened.
 
 ---
 
@@ -18,8 +19,7 @@ for what the product does and [ARCHITECTURE.md](ARCHITECTURE.md) for how.
 |---|---|---|
 | 1 | **EmailJS → Account → Security → allow API access from non-browser environments** | Server-side sending is currently refused: `403 API access from non-browser environments is currently disabled`. Nothing sends until this is on. |
 | 2 | **Rotate the EmailJS keys** | Public *and* private keys were shared in a screenshot during development. Refresh Keys, then update `backend/.env` and Render. |
-| 3 | **`git commit`** | Everything is staged, there are no commits. See the note above. |
-| 4 | **Fix three wrong aliases** on `ritishsaini1995@gmail.com` | `/app/review/learned` → Correct. `FERRTN SER`→Ferritin `2276-4`, `HCT`→Hematocrit `4544-3`, `VIT B-12`→Cobalamin `2132-9`. They are confirmed-wrong and currently decide real results. I did not touch your clinical data. |
+| 3 | **Fix three wrong aliases** on `ritishsaini1995@gmail.com` | `/app/review/learned` → Correct. `FERRTN SER`→Ferritin `2276-4`, `HCT`→Hematocrit `4544-3`, `VIT B-12`→Cobalamin `2132-9`. They are confirmed-wrong and currently decide real results. I did not touch your clinical data. |
 
 ---
 
@@ -248,6 +248,18 @@ keeps a **stacking context**, so each section became one and a popover was
 painted over by the next section regardless of `z-index` — which looks exactly
 like a transparent dropdown.
 
+**Panels are grouped by what needs attention, not by the order a report
+prints.** `data/panels.py` holds the LOINC→heading map; `Trends.jsx` orders the
+*groups* by their worst result. A lab report leads with the blood count because
+it has always led with the blood count, and adopting that order would have put
+a critical value below a screen of normals — losing the one thing the flat list
+got right. Membership is one-to-one (a code under two headings renders the row
+twice and the reader counts it twice), and anything unmapped falls to a visible
+**Other results** group, pinned last. A typo'd code in that map is invisible —
+the row just sits under the wrong heading forever — so `tests/test_panels.py`
+pins every entry against `units.CANONICAL`. It needs no database and runs in
+10ms; keep it that way.
+
 **Charts scale to the data, not to the reference interval.** A one-sided `0–99`
 dragged an LDL axis to −21. Reference bounds join the domain only when near the
 data; never below zero; ticks on round numbers.
@@ -284,9 +296,6 @@ mappings — deciding what a number *is* is clinical.
 
 ## Still outstanding
 
-- **Panel grouping** — read results as CBC / CMP / lipids rather than one flat
-  alphabetical list. The last item of the four-item plan; the other three
-  (alias undo, chart scaling, derived values) are done.
 - **No admin path to reset a lost MFA enrolment.** Lose the authenticator *and*
   the recovery codes and the account needs a database edit.
 - **`/app/security` and `/app/review/learned` were verified by API and DOM, not

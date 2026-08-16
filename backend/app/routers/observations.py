@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app import repo
 from app.audit import record
 from app.data.analyte_reference import reference_for
+from app.data.panels import panel_for
 from app.deps import current_user
 from app.models.document import LabDocument
 from app.models.loinc import LoincEntry
@@ -124,6 +125,10 @@ class PanelEntry(BaseModel):
     # False when no critical limit is published for this analyte and unit.
     # "Not assessed" and "assessed and fine" must not look the same.
     critical_assessed: bool = False
+    # Which heading a report prints this under. The label travels with the key
+    # so the taxonomy stays in one place rather than being restated in JSX.
+    panel: str = "other"
+    panel_label: str = "Other results"
 
 
 class Provenance(BaseModel):
@@ -362,6 +367,8 @@ async def panels(
 
     out = [
         PanelEntry(
+            panel=panel_for(code)[0],
+            panel_label=panel_for(code)[1],
             loinc_code=code,
             display=next((o.loinc_display for o in obs if o.loinc_display), None),
             unit=next((o.canonical_unit for o in obs if o.canonical_unit), None),

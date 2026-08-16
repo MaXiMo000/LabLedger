@@ -21,6 +21,11 @@ export default defineConfig({
   },
 
   server: {
+    // Vite otherwise picks 5173 and quietly increments when it is taken, which
+    // breaks any tool that was told which port to expect. Honouring PORT lets
+    // a second instance be started on an assigned port; unset, nothing changes.
+    port: process.env.PORT ? Number(process.env.PORT) : undefined,
+
     // The API runs on 8000. Proxying keeps the browser on one origin, so the
     // refresh cookie stays same-site in development exactly as it will in
     // production behind a single domain.

@@ -17,6 +17,39 @@ import "./Trends.css";
  * that says so.
  */
 
+const isFlagged = (p) => p.latest_flag === "high" || p.latest_flag === "low";
+
+/**
+ * The rows, under the headings a report prints them under — but ordered by
+ * what needs attention rather than by the order a report prints.
+ *
+ * A lab report's own order is a filing convention: the blood count is first
+ * because it has always been first, not because it is the interesting one
+ * today. Sorting the *groups* by their worst result keeps the reason a person
+ * opened this screen at the top, which is the same rule the flat list followed
+ * and the one thing grouping could quietly have cost. Within a group the
+ * server's ordering is kept as-is — it already sorts out-of-range first.
+ */
+function groupByPanel(panels) {
+  const groups = new Map();
+  for (const p of panels) {
+    if (!groups.has(p.panel)) {
+      groups.set(p.panel, { key: p.panel, label: p.panel_label, rows: [] });
+    }
+    groups.get(p.panel).rows.push(p);
+  }
+
+  const rank = (rows) =>
+    rows.some((p) => p.latest_critical) ? 0 : rows.some(isFlagged) ? 1 : 2;
+
+  return [...groups.values()]
+    .map((g) => ({ ...g, rank: rank(g.rows), flagged: g.rows.filter(isFlagged).length }))
+    // "Other results" means "everything the panel map had no heading for", so
+    // it stays last however it ranks — a catch-all above named groups reads as
+    // though it were one of them.
+    .sort((a, b) => (a.key === "other") - (b.key === "other") || a.rank - b.rank);
+}
+
 function Series({ loinc, unit, onInspect, patientId }) {
   const { data, isPending, error } = useQuery({
     queryKey: ["series", patientId, loinc],
@@ -278,9 +311,10 @@ export default function Trends() {
     );
   }
 
-  const flagged = panels.filter((p) => p.latest_flag === "high" || p.latest_flag === "low").length;
+  const flagged = panels.filter(isFlagged).length;
   const critical = panels.filter((p) => p.latest_critical).length;
   const pending = panels.reduce((n, p) => n + p.pending_review, 0);
+  const groups = groupByPanel(panels);
 
   return (
     <>
@@ -313,65 +347,82 @@ export default function Trends() {
         <span className="panels__head-n">Results</span>
       </div>
 
-      <ul className="panels">
-        {panels.map((p) => {
-          const open = openCode === p.loinc_code;
-          return (
-            <li key={p.loinc_code} className={`panel ${open ? "panel--open" : ""}`}>
-              <button
-                className="panel__row"
-                aria-expanded={open}
-                onClick={() => setOpenCode(open ? null : p.loinc_code)}
-              >
-                <span className="panel__name">
-                  {p.display ?? p.loinc_code}
-                  {p.pending_review > 0 && (
-                    <span className="panel__pending num">{p.pending_review} to confirm</span>
-                  )}
-                </span>
+      {groups.map((g) => (
+        <section key={g.key} className="pgroup">
+          <h2 className="pgroup__h">
+            <span className="pgroup__label">{g.label}</span>
+            {/* Carries its own noun. Right-aligned and bare it would land under
+                the "Results" column, where the row numbers below it mean
+                something else entirely — how many results that one test has. */}
+            <span className="pgroup__n num">
+              {g.rows.length} test{g.rows.length === 1 ? "" : "s"}
+            </span>
+            {g.flagged > 0 && (
+              <span className="pgroup__flagged num">{g.flagged} out of range</span>
+            )}
+          </h2>
 
-                <span className="panel__value num">
-                  {p.latest_value ?? "—"}
-                  <span className="unit"> {p.unit ?? ""}</span>
-                </span>
-
-                <IntervalRail
-                  value={p.latest_value}
-                  low={p.ref_low}
-                  high={p.ref_high}
-                  flag={p.latest_flag}
-                  size="panel"
-                  label={`${p.display}: ${p.latest_value ?? "no value"} ${p.unit ?? ""}, ${p.latest_flag}`}
-                />
-
-                {p.latest_critical ? (
-                  <span
-                    className="flag flag--critical"
-                    title={`At or beyond the ${p.latest_critical.side} critical limit of ${p.latest_critical.threshold} ${p.latest_critical.unit} — ${p.latest_critical.basis}`}
+          <ul className="panels">
+            {g.rows.map((p) => {
+              const open = openCode === p.loinc_code;
+              return (
+                <li key={p.loinc_code} className={`panel ${open ? "panel--open" : ""}`}>
+                  <button
+                    className="panel__row"
+                    aria-expanded={open}
+                    onClick={() => setOpenCode(open ? null : p.loinc_code)}
                   >
-                    critical
-                  </span>
-                ) : (
-                  <span className={`flag flag--${p.latest_flag}`}>{p.latest_flag}</span>
-                )}
-                <span className="panel__n num">
-                  {p.count}
-                  <span className="sr-only"> results for this test</span>
-                </span>
-              </button>
+                    <span className="panel__name">
+                      {p.display ?? p.loinc_code}
+                      {p.pending_review > 0 && (
+                        <span className="panel__pending num">{p.pending_review} to confirm</span>
+                      )}
+                    </span>
 
-              {open && (
-                <Series
-                  loinc={p.loinc_code}
-                  unit={p.unit}
-                  patientId={activeId}
-                  onInspect={setInspecting}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                    <span className="panel__value num">
+                      {p.latest_value ?? "—"}
+                      <span className="unit"> {p.unit ?? ""}</span>
+                    </span>
+
+                    <IntervalRail
+                      value={p.latest_value}
+                      low={p.ref_low}
+                      high={p.ref_high}
+                      flag={p.latest_flag}
+                      size="panel"
+                      label={`${p.display}: ${p.latest_value ?? "no value"} ${p.unit ?? ""}, ${p.latest_flag}`}
+                    />
+
+                    {p.latest_critical ? (
+                      <span
+                        className="flag flag--critical"
+                        title={`At or beyond the ${p.latest_critical.side} critical limit of ${p.latest_critical.threshold} ${p.latest_critical.unit} — ${p.latest_critical.basis}`}
+                      >
+                        critical
+                      </span>
+                    ) : (
+                      <span className={`flag flag--${p.latest_flag}`}>{p.latest_flag}</span>
+                    )}
+                    <span className="panel__n num">
+                      {p.count}
+                      <span className="sr-only"> results for this test</span>
+                    </span>
+                  </button>
+
+                  {open && (
+                    <Series
+                      loinc={p.loinc_code}
+                      unit={p.unit}
+                      patientId={activeId}
+                      onInspect={setInspecting}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
       <Calculated data={derived} />
 

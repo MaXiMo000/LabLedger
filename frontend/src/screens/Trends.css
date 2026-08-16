@@ -213,6 +213,48 @@
   .panels__head { display: none; }
 }
 
+/* ---- panel groups -------------------------------------------------------
+   The headings a report is printed under. Flex rather than the five-column
+   grid the rows use: a heading has nothing to align to the value and rail
+   columns, and staying out of that grid means it survives the mobile reflow
+   without a second breakpoint.
+
+   Deliberately quieter than .panels__head — this is a divider inside the list,
+   not a second set of column labels, and two competing uppercase rules at the
+   same weight made the list read as though it had restarted. */
+
+.pgroup + .pgroup { margin-top: var(--s6); }
+
+.pgroup__h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin: 0;
+  padding-block: var(--s3) var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.pgroup__label { min-width: 0; }
+
+/* Kept beside the label rather than pushed right: the right edge belongs to
+   the "Results" column, and a bare number sitting there would be read as one
+   of that column's values. */
+.pgroup__n { color: var(--ink-faint); text-transform: none; letter-spacing: normal; }
+
+/* The reason this group sorted where it did, stated rather than left for the
+   reader to infer from the flags below it. */
+.pgroup__flagged {
+  margin-left: auto;
+  color: var(--flag-high);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 /* ---- critical values ----------------------------------------------------
    A different kind of statement from "high", so it does not borrow the flag
    column's quiet tone. Still ink on paper rather than an alarm: the number and
