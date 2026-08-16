@@ -37,10 +37,21 @@ services:
         # Turns on Secure cookies and HSTS. Render terminates TLS, so this is
         # correct here and wrong on localhost.
         value: production
+      # Literal public URLs, not `fromService ... property: host`. That
+      # property returns the *private network* hostname — a bare `labledger-web`
+      # with no scheme and no domain — and it is not supported for static sites
+      # at all. Every link the server composes is built by string concatenation
+      # (`f"{frontend_url}/login?error=oauth"`), so a bare name produces a
+      # *relative* redirect that resolves against whatever path the browser is
+      # on. That is not a cosmetic bug: password-reset and invitation links are
+      # built the same way, and they would have gone out unusable.
+      #
+      # These share the hostname assumption the /api rewrite below already
+      # makes. If Render ever assigns different names, all three change together.
       - key: BACKEND_URL
-        fromService: { type: web, name: labledger-api, property: host }
+        value: https://labledger-api.onrender.com
       - key: FRONTEND_URL
-        fromService: { type: web, name: labledger-web, property: host }
+        value: https://labledger-web.onrender.com
       - key: REDIS_URL
         fromService: { type: keyvalue, name: labledger-redis, property: connectionString }
       - key: MONGO_URI
@@ -75,7 +86,19 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        # Must match a redirect URI registered in Google Cloud Console exactly.
+        # Must match a redirect URI registered in Google Cloud Console exactly,
+        # and it must be on the **frontend** origin, not the API's.
+        #
+        # The sign-in button is `href="/api/auth/google"` — a relative link, so
+        # the browser is on labledger-web and the OAuth state cookie that
+        # SessionMiddleware sets is stored for labledger-web. Pointing the
+        # callback at labledger-api sends the browser to a different site,
+        # which does not carry that cookie: Authlib sees no state, raises, and
+        # the user lands on `?error=oauth`. The refresh cookie would have been
+        # set on the wrong host for the same reason.
+        #
+        # So the callback goes through the rewrite like every other request:
+        #   https://labledger-web.onrender.com/api/auth/google/callback
         sync: false
       - key: EMAILJS_SERVICE_ID
         sync: false
