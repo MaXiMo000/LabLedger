@@ -98,8 +98,14 @@ sleeps with them, so an external pinger against `/api/health` is what keeps
 uploads processing — at the cost of 744 of the 750 monthly Free instance hours,
 which is enough for exactly one always-on Free web service and no more.
 
-Untested in production: Google sign-in, and whether mail sent from Render
-composes links against the right `FRONTEND_URL`.
+Google sign-in and mail from Render are both confirmed working, including that
+reset links carry the right host. That took two fixes worth remembering:
+`fromService ... property: host` is the **private network** hostname, not a
+URL — bare, no scheme, and unsupported for static sites — so `FRONTEND_URL` and
+`BACKEND_URL` are literal values in `render.yaml`. And the OAuth callback must
+sit on the *frontend* origin, because the sign-in link is relative, which means
+the OAuth state cookie is stored there and a callback on the API host never
+receives it.
 
 ## Deploying to Render
 
@@ -326,7 +332,15 @@ it has always led with the blood count, and adopting that order would have put
 a critical value below a screen of normals — losing the one thing the flat list
 got right. Membership is one-to-one (a code under two headings renders the row
 twice and the reader counts it twice), and anything unmapped falls to a visible
-**Other results** group, pinned last. A typo'd code in that map is invisible —
+**Other results** group, pinned last. Urine glucose and serum glucose are
+different analytes with different codes and must never share a heading, which
+is the case that makes one-to-one membership feel restrictive and is exactly
+why it is not.
+
+`panels.UNITLESS` excuses dipstick analytes from the unit-table check below.
+A result of "Trace" is not a quantity: there is nothing to convert, and adding
+entries to `units.CANONICAL` to satisfy a test would be inventing a conversion
+that does not exist. A typo'd code in that map is invisible —
 the row just sits under the wrong heading forever — so `tests/test_panels.py`
 pins every entry against `units.CANONICAL`. It needs no database and runs in
 10ms; keep it that way.

@@ -103,7 +103,29 @@ PANELS: list[tuple[str, str, tuple[str, ...]]] = [
         "6301-6",    # INR
         "5902-2",    # Prothrombin time
     )),
+    ("urinalysis", "Urinalysis", (
+        "5792-7",    # Glucose, urine, test strip
+        "2887-8",    # Protein, urine, presence
+        "5803-2",    # pH, urine, test strip
+    )),
 ]
+
+# Codes deliberately absent from `units.CANONICAL`.
+#
+# A dipstick reports Negative / Trace / 1+, which is not a quantity: there is
+# no unit and nothing to convert, so `units.CANONICAL` is the wrong place for
+# them and adding entries there to satisfy a test would be inventing a
+# conversion that does not exist. They are still results and still need a
+# heading, so they are listed above and excused here.
+#
+# The exemption is kept explicit and short on purpose — the test it relaxes is
+# the only thing standing between a mistyped LOINC and an analyte silently
+# filed under the wrong panel forever. Every code here was read off real data
+# rather than recalled.
+UNITLESS: frozenset[str] = frozenset({
+    "5792-7",
+    "2887-8",
+})
 
 OTHER_KEY = "other"
 OTHER_LABEL = "Other results"
