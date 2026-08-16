@@ -549,8 +549,11 @@ mappings — deciding what a number *is* is clinical.
   harness — the enforcement is server-side and `test_access.py` covers it. The
   handoff used to call this "real branching"; having read it, that was
   overstated.
-- **The LOINC search ranks badly** — see item 1 under *What to build next*. It
-  is listed there rather than here because it is work, not a gap in testing.
+- **Reports is the one list still ungrouped.** It lists documents rather than
+  analytes, so `data/panels.py` does not apply to it unchanged. Deliberate.
+- **Nothing checks that a configured reference interval is clinically
+  sensible** — only that it is structurally sound and in the canonical unit.
+  Paediatric bands are the obvious gap; the shipped table has no data for them.
 
 ## Explicitly out of scope
 
