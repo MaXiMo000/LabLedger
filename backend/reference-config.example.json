@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "Reference intervals and critical limits for one deployment.",
+    "Point REFERENCE_CONFIG_PATH at a copy of this file.",
+    "",
+    "Every unit must match the canonical unit this pipeline emits for that",
+    "analyte (see app/pipeline/units.py, CANONICAL). A limit in any other unit",
+    "is never compared, which means the analyte is silently never assessed --",
+    "so a mismatch refuses to boot rather than passing quietly.",
+    "",
+    "Each section replaces the shipped table wholesale rather than merging",
+    "into it. A half-replaced table would leave nobody able to tell which",
+    "analytes their own file governs and which fell through to values nobody",
+    "at their institution approved. Omit a section entirely to keep the",
+    "shipped illustrative values for it -- and note that those are",
+    "illustrative, not guidance."
+  ],
+
+  "provenance": {
+    "approved_by": "Dr A. Example, Laboratory Director",
+    "approved_on": "2026-03-01",
+    "population": "Adults 18 and over, ambulatory",
+    "note": "In-house reference interval study, 2025 Q4. Paediatric intervals are not covered by this file."
+  },
+
+  "reference_intervals": {
+    "2160-0": {
+      "unit": "mg/dL",
+      "rows": [
+        { "sex": "F", "age_low": 18, "age_high": 120, "low": 0.57, "high": 1.0 },
+        { "sex": "M", "age_low": 18, "age_high": 120, "low": 0.74, "high": 1.35 }
+      ]
+    },
+    "2823-3": {
+      "unit": "mmol/L",
+      "rows": [
+        { "sex": null, "age_low": 18, "age_high": 120, "low": 3.5, "high": 5.2 }
+      ]
+    },
+    "41995-2": {
+      "unit": "%",
+      "rows": [
+        { "sex": null, "age_low": 18, "age_high": 120, "low": null, "high": 5.7 }
+      ]
+    }
+  },
+
+  "critical_limits": {
+    "2823-3": { "unit": "mmol/L", "low": 2.5, "high": 6.5 },
+    "2951-2": { "unit": "mmol/L", "low": 120.0, "high": 160.0 },
+    "2345-7": { "unit": "mg/dL", "low": 40.0, "high": 500.0 },
+    "718-7": { "unit": "g/dL", "low": 7.0, "high": 20.0 }
+  },
+
+  "delta_checks": {
+    "2160-0": { "percent": 50.0, "within_days": 30 },
+    "718-7": { "percent": 20.0, "within_days": 30 }
+  }
+}

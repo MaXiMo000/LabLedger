@@ -42,12 +42,14 @@ the whole conversion table exists to prevent.
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.data import reference_config
+
 # loinc -> (unit, critical_low, critical_high)
 #
 # Adult. Widely-cited values, and every one of them is arguable — that is the
 # nature of the list, not a defect in this one. `None` means the laboratories
 # consulted do not set a limit on that side, not that any value is acceptable.
-CRITICAL: dict[str, tuple[str, float | None, float | None]] = {
+_SHIPPED_CRITICAL: dict[str, tuple[str, float | None, float | None]] = {
     # --- electrolytes: the classic panic panel ---
     "2823-3":  ("mmol/L", 2.5, 6.5),      # Potassium
     "2951-2":  ("mmol/L", 120.0, 160.0),  # Sodium
@@ -68,7 +70,13 @@ CRITICAL: dict[str, tuple[str, float | None, float | None]] = {
 
 # Where the numbers came from, shown alongside any flag so the basis is
 # inspectable rather than asserted.
-CRITICAL_BASIS = "illustrative adult critical limits — replace per institution"
+CRITICAL = reference_config.limits(_SHIPPED_CRITICAL)
+
+# Shown alongside any flag so the basis is inspectable rather than asserted.
+# When a deployment configures its own limits this names who approved them, for
+# which population, and when — which is the whole reason the config demands
+# those fields.
+CRITICAL_BASIS = reference_config.BASIS
 
 # loinc -> (percent change, within days)
 #
@@ -76,7 +84,7 @@ CRITICAL_BASIS = "illustrative adult critical limits — replace per institution
 # proportional change over three days and over three years mean entirely
 # different things, and only one of them is a finding. Percentages rather than
 # absolutes so one line covers the whole reportable span of an analyte.
-DELTA: dict[str, tuple[float, int]] = {
+_SHIPPED_DELTA: dict[str, tuple[float, int]] = {
     "2160-0":  (50.0, 30),   # Creatinine — acute kidney injury, or a swapped tube
     "2823-3":  (20.0, 30),   # Potassium
     "2951-2":  (5.0, 30),    # Sodium — a small percentage is a large clinical move
@@ -85,6 +93,8 @@ DELTA: dict[str, tuple[float, int]] = {
     "777-3":   (50.0, 30),   # Platelets
     "6690-2":  (50.0, 30),   # White cell count
 }
+
+DELTA = reference_config.deltas(_SHIPPED_DELTA)
 
 
 @dataclass(frozen=True)

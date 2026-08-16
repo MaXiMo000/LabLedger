@@ -18,6 +18,8 @@ band came from the user's actual lab or from our fallback.
 import re
 from datetime import date
 
+from app.data import reference_config
+
 # Printed ranges come in several shapes.
 _RANGE_BOUNDED = re.compile(r"^\s*([\d.]+)\s*[-–—]\s*([\d.]+)\s*$")
 _RANGE_UPPER = re.compile(r"^\s*[<≤]=?\s*([\d.]+)\s*$")
@@ -26,7 +28,7 @@ _RANGE_LOWER = re.compile(r"^\s*[>≥]=?\s*([\d.]+)\s*$")
 # loinc -> (sex or None, min_age, max_age, low, high) in the canonical unit.
 # Deliberately small: a fallback for the handful of analytes where a missing
 # printed range is common, not an attempt to replace the lab's own intervals.
-BUILTIN: dict[str, list[tuple[str | None, int, int, float | None, float | None]]] = {
+_SHIPPED: dict[str, list[tuple[str | None, int, int, float | None, float | None]]] = {
     "2276-4":  [("F", 18, 120, 11.0, 307.0), ("M", 18, 120, 24.0, 336.0)],   # Ferritin ng/mL
     "718-7":   [("F", 18, 120, 11.7, 15.5), ("M", 18, 120, 13.2, 17.1)],     # Hemoglobin g/dL
     "4544-3":  [("F", 18, 120, 34.9, 44.5), ("M", 18, 120, 38.5, 50.0)],     # Hematocrit %
@@ -38,6 +40,13 @@ BUILTIN: dict[str, list[tuple[str | None, int, int, float | None, float | None]]
     "41995-2": [(None, 18, 120, None, 5.7)],                                 # HbA1c %
     "2132-9":  [(None, 18, 120, 232.0, 1245.0)],                             # B12 pg/mL
 }
+
+# Replaced wholesale by REFERENCE_CONFIG_PATH when one is set. The shipped
+# values above stay visible as the fallback and as the shape a config must
+# take; `reference_config` validates that a configured interval is written in
+# the unit this pipeline actually emits, which is the failure that would
+# otherwise be silent.
+BUILTIN = reference_config.intervals(_SHIPPED)
 
 
 def parse_printed_range(raw: str | None) -> tuple[float | None, float | None]:

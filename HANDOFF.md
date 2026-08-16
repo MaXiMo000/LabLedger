@@ -448,13 +448,35 @@ cosmetic — `_charted` measures each delta against the previous *charted* point
 so an unstable order can change a reported change. `_CHART_ORDER` adds `_id` as
 a stable tiebreak.
 
-### 4. Reference intervals a deployment can actually own
+### 4. ~~Reference intervals a deployment can own~~ — done
 
-`pipeline/ranges.py` and `pipeline/flags.py` both ship illustrative adult values
-and both say so. A deployment cannot replace them without editing Python. Until
-that is configuration with a provenance field per row — who signed it, when, for
-which population — the honest ceiling on this project stays where it is. This is
-the single biggest gap between "defensible architecture" and "usable in a lab".
+`REFERENCE_CONFIG_PATH` points at a JSON file; `reference-config.example.json`
+is the shape. It replaces the shipped tables in `ranges.py` and `flags.py`, and
+its provenance block becomes the `basis` string shown next to every critical
+flag — so the UI names who approved the threshold and for which population,
+instead of our illustrative note.
+
+**A file, not a database table.** A lab director signs a document, and a file in
+version control *is* that document: who changed what, when, and what it was
+before, in a form an assessor can read. Runtime-editable thresholds would need
+their own audit, permissions and screen, and still be a worse record than
+`git log`.
+
+**Invalid config is fatal.** A deployment believing its own limits are live
+while the illustrative ones actually run has the confidence without the
+substance. The check that matters: a unit must equal the canonical unit for
+that analyte, because a limit in a unit the pipeline never emits is never
+compared and the analyte is *silently never assessed*. That is now a boot
+failure naming the entry.
+
+**Each section replaces wholesale, never merges.** A half-replaced table leaves
+nobody able to tell which analytes their file governs and which fell through to
+values nobody there approved.
+
+Still open, and the reason this does not close the clinical gap: paediatric
+intervals need age bands the shipped table has no data for, and nothing
+validates that a configured interval is *clinically* sensible — only that it is
+structurally sound and in the right unit.
 
 ### 5. Hardening, in rough order of exposure
 
