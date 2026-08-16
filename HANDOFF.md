@@ -505,10 +505,18 @@ structurally sound and in the right unit.
 - **A retention policy that does something.** Documents are kept forever;
   `ARCHITECTURE.md` lists retention as out of scope, which is honest but is also
   the thing an assessor asks about first.
-- **Audit the audit log.** `repo.py` is the choke point and that is the right
-  design, but nothing tests that a route added tomorrow goes through it. A test
-  that enumerates the routers and asserts every data path records something
-  would keep the guarantee true rather than merely intended.
+- ~~**Audit the audit log.**~~ Done — `tests/test_choke_point.py` reads the
+  running app's route table and each handler's source. Three properties: a route
+  naming a `patient_id` must scope to it, no route may reach records without
+  `repo.`/`access.`, and every POST/PATCH/DELETE on a record must write an audit
+  entry. No database; 0.02s.
+
+  **The allowlist is the mechanism**, not the assertions. A new route either
+  reaches the choke point or its author comes to `NO_RECORD_DATA` and writes
+  down why it need not — six entries today, with a tripwire if it ever exceeds
+  eight, because an allowlist that keeps growing means the choke point has
+  stopped being one. Verified by adding a deliberately unscoped route: both
+  assertions fire and name it.
 - **Structured error codes.** `X-Credential-Valid` works but is a one-off. A
   small `code` field on error bodies would let the client branch on meaning
   rather than on status plus header plus prose.
