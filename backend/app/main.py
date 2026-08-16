@@ -124,7 +124,12 @@ async def security_headers(request, call_next):
     return response
 
 
-@app.get("/api/health")
+# HEAD as well as GET. Uptime monitors send HEAD by default — it is the
+# cheapest way to ask "is this alive" — and FastAPI registers only the method
+# named, so a GET-only probe answers 405 and every monitor reads that as an
+# outage. The service was never down; the check was asking a question the route
+# had not been told to answer. HTTP says HEAD is valid wherever GET is.
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     """Liveness probe. Deliberately unauthenticated and free of any detail."""
     return {"status": "ok", "env": settings.env}
