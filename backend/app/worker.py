@@ -24,7 +24,7 @@ from app.models.user import utcnow
 from app.pipeline.extract import extract
 from app.pipeline.llm import LLMUnavailableError, adjudicate
 from app.pipeline.mapping import resolve, should_force_review
-from app.pipeline.ranges import age_on, flag_value, resolve_range
+from app.pipeline.ranges import age_on, flag_against_range, resolve_range
 from app.pipeline.units import parse_value, to_canonical
 from app.security import decrypt_field, decrypt_str, encrypt_field
 
@@ -191,11 +191,15 @@ async def finalize_values(observations: list[Observation],
         obs.unit_conversion_factor = factor
 
         age = age_on(dob, obs.collected_at.date() if obs.collected_at else None)
-        # Ranges are printed in the lab's own units, so they compare against
-        # the raw value; the canonical value exists for cross-lab trending.
         obs.ref_low, obs.ref_high, obs.ref_source = resolve_range(
             obs.raw_ref_range, obs.loinc_code, sex, age)
-        obs.flag = flag_value(obs.value_num, obs.ref_low, obs.ref_high, obs.raw_flag)
+        # A printed range is in the lab's own units and a built-in one is in the
+        # canonical unit, so which value to compare depends on which was used.
+        # `flag_against_range` owns that rule — see it for what comparing the
+        # wrong pair costs.
+        obs.flag = flag_against_range(
+            obs.value_num, obs.canonical_value,
+            obs.ref_low, obs.ref_high, obs.ref_source, obs.raw_flag)
 
         await obs.save()
 

@@ -9,6 +9,7 @@ from datetime import date
 
 from app.pipeline.ranges import (
     age_on,
+    flag_against_range,
     flag_value,
     parse_printed_range,
     resolve_range,
@@ -166,3 +167,55 @@ def test_printed_flag_overrides_numeric_comparison():
 def test_unknown_when_there_is_nothing_to_compare_against():
     assert flag_value(None, 1.0, 2.0) == "unknown"
     assert flag_value(50.0, None, None) == "unknown"
+
+
+# --- a range and the value it is compared against must share a unit ----------
+
+def test_a_builtin_range_is_compared_against_the_converted_value():
+    """The bug this exists to stop, with the case that exposed it.
+
+    A creatinine of 80 µmol/L with no printed range was compared against the
+    built-in 0.74-1.35 **mg/dL** interval and came back `high`. It is
+    0.90 mg/dL — squarely normal for an adult male. Non-US reports print
+    µmol/L routinely and often omit the interval, so this was not exotic; it
+    was a confident wrong flag on an ordinary result.
+    """
+    value_num, _, _ = parse_value("80")
+    canonical, unit, _ = to_canonical("2160-0", value_num, "umol/L")
+    low, high, source = resolve_range(None, "2160-0", "M", 40)
+
+    assert (unit, source) == ("mg/dL", "builtin")
+    assert round(canonical, 2) == 0.90
+    assert flag_against_range(value_num, canonical, low, high, source) == "normal"
+    # The old behaviour, kept visible: comparing the raw number against
+    # canonical-unit bounds is what produced the wrong answer.
+    assert flag_value(value_num, low, high) == "high"
+
+
+def test_a_printed_range_is_compared_against_the_printed_value():
+    """A printed interval is in the lab's own units, so the raw value is the
+    right one to compare — converting first would be the same bug mirrored."""
+    value_num, _, _ = parse_value("80")
+    canonical, _, _ = to_canonical("2160-0", value_num, "umol/L")
+    low, high, source = resolve_range("60 - 110", "2160-0", "M", 40)
+
+    assert source == "pdf"
+    assert flag_against_range(value_num, canonical, low, high, source) == "normal"
+
+
+def test_a_builtin_range_is_not_applied_without_a_conversion():
+    """No audited conversion means no comparable number. Better `unknown` than
+    a flag derived from an unknown unit."""
+    value_num, _, _ = parse_value("80")
+    canonical, unit, _ = to_canonical("2160-0", value_num, "made-up-unit")
+    low, high, source = resolve_range(None, "2160-0", "M", 40)
+
+    assert (canonical, unit) == (None, None)
+    assert flag_against_range(value_num, canonical, low, high, source) == "unknown"
+
+
+def test_the_labs_own_flag_still_wins_either_way():
+    """It reflects that instrument's delta checks and any pathologist override,
+    which no comparison against an interval can see."""
+    assert flag_against_range(80.0, 0.9, 0.74, 1.35, "builtin", "H") == "high"
+    assert flag_against_range(80.0, 0.9, 0.74, 1.35, "pdf", "L") == "low"

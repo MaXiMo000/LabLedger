@@ -92,6 +92,38 @@ def resolve_range(
     return None, None, "none"
 
 
+def flag_against_range(
+    value_num: float | None,
+    canonical_value: float | None,
+    low: float | None,
+    high: float | None,
+    source: str,
+    printed_flag: str | None = None,
+) -> str:
+    """Compare a result against its range, in the unit that range is written in.
+
+    The two range sources are written in **different units**, and this is the
+    only place that knows it:
+
+    - a **printed** range came off the report in the lab's own units, so it
+      compares against the raw value exactly as printed;
+    - a **builtin** range is written in the canonical unit, so it compares
+      against the converted value.
+
+    Getting this wrong is silent and severe. A creatinine of 80 µmol/L with no
+    printed range was compared against the built-in 0.74-1.35 **mg/dL** and
+    came back `high`; it is 0.90 mg/dL, squarely normal. Non-US reports print
+    µmol/L routinely and often omit the interval, so this was not exotic.
+
+    A builtin range with no canonical value is **not** applied. That happens
+    when the unit has no audited conversion, and comparing across an unknown
+    conversion is the failure the whole unit table exists to prevent — better
+    `unknown` than a confident wrong flag.
+    """
+    against = value_num if source == "pdf" else canonical_value
+    return flag_value(against, low, high, printed_flag)
+
+
 def flag_value(
     value: float | None,
     low: float | None,
