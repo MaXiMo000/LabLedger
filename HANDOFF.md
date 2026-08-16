@@ -420,14 +420,33 @@ less predictable to work down.
 **Reports is still ungrouped** — it lists documents rather than analytes, so the
 map does not apply to it unchanged. Left out deliberately rather than forgotten.
 
-### 3. Trends across a panel, not one analyte at a time
+### 3. ~~Trends across a panel~~ — done
 
-Every chart today is one analyte. The questions people actually ask are "is my
-whole lipid profile moving" and "did anything change after that medication".
-Overlaying a panel on shared time axes, normalised to each analyte's reference
-interval rather than to raw units, answers both. **Watch:** normalising to the
-interval is a presentation choice that can imply comparability between analytes
-that do not compare — label it plainly and never draw a combined trend line.
+**The plan in this slot was wrong and was not built.** It said to overlay a
+panel on one axis, normalised to each analyte's reference interval. That
+invents a common scale for quantities that have none: it puts potassium and
+cholesterol on one axis and invites reading the height of one against the
+other. The data refuses it too — a lipid panel here holds an HDL interval of
+`39–` with no upper bound to normalise against, and analytes still awaiting
+review have no interval at all.
+
+What these analytes genuinely share is *when they were drawn*, so that is the
+only thing shared. `GET /observations/{id}/panel-trends?panel=cbc` returns one
+track per analyte, each keeping its own values, unit and band; the client
+stacks them on one x scale. No combined line is drawn, ever — a line through
+two different quantities is an artefact of the drawing, not a trend.
+
+Tracks with nothing chartable come back anyway, carrying a count of what was
+excluded. An analyte that vanished from a panel is a finding.
+
+Both this and `/series` go through `_charted`, extracted so the two cannot
+drift on which points are comparable. That extraction immediately earned
+itself: the test that compares them caught the two endpoints returning the same
+points in *opposite orders*, because results sharing a `collected_at` sort equal
+and Mongo returned each query's ties in whatever order its plan produced. Not
+cosmetic — `_charted` measures each delta against the previous *charted* point,
+so an unstable order can change a reported change. `_CHART_ORDER` adds `_id` as
+a stable tiebreak.
 
 ### 4. Reference intervals a deployment can actually own
 

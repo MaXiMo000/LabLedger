@@ -1,0 +1,91 @@
+/* Small multiples for one panel.
+
+   Every row is the same height and shares one x scale, so the eye can run down
+   a date. Nothing here encodes a relationship *between* rows — no shared value
+   axis, no combined line — because there is none to encode. */
+
+.ptrends { padding: var(--s2) 0 var(--s5); }
+
+.ptrends__note {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  max-width: 62ch;
+  margin-bottom: var(--s4);
+}
+
+.ptracks { list-style: none; margin: 0; padding: 0; }
+
+.ptrack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 2fr) 5rem;
+  align-items: center;
+  gap: var(--s4);
+  padding-block: var(--s2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.ptrack__name {
+  font-size: var(--text-small);
+  color: var(--ink);
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.ptrack__unit {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.ptrack__plot { width: 100%; height: 46px; display: block; overflow: visible; }
+
+/* Drawn first, so the line is read against it rather than over it. */
+.ptrack__band { fill: color-mix(in srgb, var(--ink) 7%, transparent); }
+
+.ptrack__line { fill: none; stroke: var(--ink-muted); stroke-width: 1.25; }
+
+.ptrack__tick { stroke: var(--ink-muted); stroke-width: 2; stroke-linecap: round; }
+.ptrack__tick--high, .ptrack__tick--low { stroke: var(--flag-high); stroke-width: 2.5; }
+
+.ptrack__last {
+  text-align: right;
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+/* The count of results that could not join the line. Present but quiet: it is
+   a caveat on the row, not a reading. */
+.ptrack__excl {
+  margin-left: var(--s2);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.ptrack--empty .ptrack__none {
+  grid-column: 2 / -1;
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.ptrends__axis {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--s2);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* Below the fold the three columns stop fitting; the plot keeps full width and
+   the name and latest value sit above it. */
+@media (max-width: 720px) {
+  .ptrack {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--s2);
+  }
+  .ptrack__plot { grid-column: 1 / -1; }
+  .ptrack--empty .ptrack__none { grid-column: 1 / -1; }
+}

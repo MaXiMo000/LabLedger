@@ -39,7 +39,7 @@ function niceStep(range, count) {
  * **Ticks land on round numbers**, because an axis labelled 88.1 and 121.9 is
  * arithmetic showing through rather than a reading aid.
  */
-function niceBounds(values, low, high) {
+export function niceBounds(values, low, high) {
   const data = values.filter((v) => v != null);
   let min = Math.min(...data);
   let max = Math.max(...data);

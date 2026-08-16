@@ -2,13 +2,13 @@
 
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app import repo
 from app.audit import record
 from app.data.analyte_reference import reference_for
-from app.data.panels import panel_for
+from app.data.panels import OTHER_KEY, OTHER_LABEL, PANELS, panel_for
 from app.deps import current_user
 from app.models.document import LabDocument
 from app.models.loinc import LoincEntry
@@ -200,8 +200,46 @@ async def series(
     series is exactly the failure this whole architecture exists to prevent.
     """
     patient, q = await repo.patient_observations(user, patient_id)
-    rows = await q.find(Observation.loinc_code == loinc).sort("+collected_at").to_list()
+    rows = await q.find(Observation.loinc_code == loinc).sort(*_CHART_ORDER).to_list()
+    points, excluded, unit, display = _charted(rows, loinc)
 
+    await record("read", "series", loinc, patient_id=patient.id)
+    ins = analyse([p.model_dump() for p in points], loinc)
+    return Series(
+        loinc_code=loinc, display=display, unit=unit,
+        points=points, excluded=excluded,
+        direction=ins.direction, change_pct=ins.change_pct,
+        span_days=ins.span_days,
+        insights=[InsightOut(kind=i.kind, text=i.text, severity=i.severity, at=i.at)
+                  for i in ins.items],
+        reference=reference_for(loinc),
+    )
+
+
+# Date first, then id. The tiebreak is not decoration: two results drawn at the
+# same moment sort equal, and Mongo then returns them in whatever order the
+# query plan happened to produce — which differed between the single-analyte
+# query and the whole-panel one, so the two screens charted the same points in
+# opposite orders. Worse than cosmetic: `_charted` measures each delta against
+# the previous *charted* point, so an unstable order can change a reported
+# change. An arbitrary but stable tiebreak is what makes the two agree.
+_CHART_ORDER = ("+collected_at", "+_id")
+
+
+def _charted(
+    rows: list[Observation], loinc: str
+) -> tuple[list[SeriesPoint], list[ExcludedPoint], str | None, str | None]:
+    """Split one analyte's rows into what may be charted and what may not.
+
+    Extracted so the single-analyte chart and the panel overlay cannot drift
+    apart on this. Two screens disagreeing about whether a point is comparable
+    would be worse than either being wrong on its own: the reader would have no
+    way to tell which one to believe.
+
+    Rows must arrive sorted by collection date — the delta check compares each
+    point with the previous *charted* one and would otherwise manufacture a
+    change out of ordering.
+    """
     points: list[SeriesPoint] = []
     excluded: list[ExcludedPoint] = []
     unit = display = None
@@ -244,17 +282,39 @@ async def series(
             raw_value=o.raw_value, raw_unit=o.raw_unit, reason=reason,
         ))
 
-    await record("read", "series", loinc, patient_id=patient.id)
-    ins = analyse([p.model_dump() for p in points], loinc)
-    return Series(
-        loinc_code=loinc, display=display, unit=unit,
-        points=points, excluded=excluded,
-        direction=ins.direction, change_pct=ins.change_pct,
-        span_days=ins.span_days,
-        insights=[InsightOut(kind=i.kind, text=i.text, severity=i.severity, at=i.at)
-                  for i in ins.items],
-        reference=reference_for(loinc),
-    )
+    return points, excluded, unit, display
+
+
+class PanelTrack(BaseModel):
+    """One analyte's line inside a panel overlay.
+
+    Deliberately carries raw values in the analyte's own canonical unit, and
+    its own reference bounds. There is no shared value scale and no normalised
+    field, because there is no honest one — see the endpoint.
+    """
+
+    loinc_code: str
+    display: str | None
+    unit: str | None
+    ref_low: float | None
+    ref_high: float | None
+    points: list[SeriesPoint]
+    # Count only. The reasons belong on the single-analyte chart, where there
+    # is room to read them; hiding the fact that rows were dropped is not an
+    # option, so the number travels even here.
+    excluded: int = 0
+
+
+class PanelTrends(BaseModel):
+    """Every analyte in one panel, on one time axis."""
+
+    panel: str
+    panel_label: str
+    # The union of every track's dates, so the caller draws one shared x axis
+    # rather than one per analyte — the whole point of the view.
+    first_at: datetime | None = None
+    last_at: datetime | None = None
+    tracks: list[PanelTrack] = []
 
 
 class DerivedInput(BaseModel):
@@ -347,6 +407,73 @@ def _critical_out(loinc: str, o: Observation) -> CriticalOut | None:
     """Project the critical check for one observation, if there is one to make."""
     crit = flags.critical_for(loinc, o.canonical_value, o.canonical_unit)
     return CriticalOut(**vars(crit)) if crit else None
+
+
+@router.get("/{patient_id}/panel-trends", response_model=PanelTrends)
+async def panel_trends(
+    patient_id: str,
+    panel: str = Query(min_length=2, max_length=32),
+    user: User = Depends(current_user),
+):
+    """Every analyte in one panel, over one shared time axis.
+
+    **Small multiples, not one overlaid plot.** The obvious design is to
+    normalise each analyte to its reference interval so they can share a value
+    axis. That was the plan and it is wrong: it invents a common scale for
+    quantities that have none, and putting potassium and cholesterol on one
+    axis invites reading the height of one against the other. It also fails
+    where the data already fails — a one-sided interval (`<5.7` for HbA1c) has
+    no width to normalise against, and an analyte with no published interval
+    has nothing at all.
+
+    What these analytes genuinely share is *when they were drawn*. So the time
+    axis is shared and everything else is not: each track keeps its own values,
+    its own unit and its own reference band, and the caller stacks them. The
+    question this answers — "did anything move after that change" — is answered
+    by reading down a date, which is exactly what a shared x axis is for.
+
+    Tracks with no chartable point are still returned. An analyte that dropped
+    out entirely is a finding, and a panel that quietly shrinks to the rows
+    that happened to convert is the silent-omission failure the whole pipeline
+    is built to avoid.
+    """
+    key, label = next(
+        ((k, lbl) for k, lbl, _ in PANELS if k == panel),
+        (OTHER_KEY, OTHER_LABEL) if panel == OTHER_KEY else (None, None),
+    )
+    if key is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such panel")
+
+    patient, q = await repo.patient_observations(user, patient_id)
+    rows = await q.find(
+        Observation.loinc_code != None  # noqa: E711 - Beanie builds a Mongo query
+    ).sort(*_CHART_ORDER).to_list()
+
+    by_code: dict[str, list[Observation]] = {}
+    for o in rows:
+        if panel_for(o.loinc_code)[0] == key:
+            by_code.setdefault(o.loinc_code, []).append(o)
+
+    tracks = []
+    for code, obs in by_code.items():
+        points, excluded, unit, display = _charted(obs, code)
+        tracks.append(PanelTrack(
+            loinc_code=code, display=display, unit=unit,
+            ref_low=points[-1].ref_low if points else None,
+            ref_high=points[-1].ref_high if points else None,
+            points=points, excluded=len(excluded),
+        ))
+    # Most-measured first: a track with two points is a line, one with a single
+    # point is a dot, and leading with the dots makes the panel look empty.
+    tracks.sort(key=lambda t: (-len(t.points), t.display or ""))
+
+    dates = [p.collected_at for t in tracks for p in t.points if p.collected_at]
+    await record("read", "series", key, patient_id=patient.id)
+    return PanelTrends(
+        panel=key, panel_label=label, tracks=tracks,
+        first_at=min(dates) if dates else None,
+        last_at=max(dates) if dates else None,
+    )
 
 
 @router.get("/{patient_id}/panels", response_model=list[PanelEntry])

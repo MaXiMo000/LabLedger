@@ -364,3 +364,21 @@
   .calc__summary { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--s1); }
   .calc__n { display: none; }
 }
+
+/* The affordance for the panel overlay. A quiet text button rather than a
+   styled control: it sits inside a heading, and a button shape there would
+   compete with the reading below it. */
+.pgroup__chart {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pgroup__chart:hover { color: var(--ink); }

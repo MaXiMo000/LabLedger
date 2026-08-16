@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { usePatient } from "../patients/PatientContext";
 import IntervalRail from "../components/IntervalRail";
+import PanelTrends from "./PanelTrends";
 import Provenance from "./Provenance";
 import TrendChart from "./TrendChart";
 import "./Trends.css";
@@ -280,6 +281,7 @@ function Calculated({ data }) {
 
 export default function Trends() {
   const [openCode, setOpenCode] = useState(null);
+  const [openPanel, setOpenPanel] = useState(null);
   const [inspecting, setInspecting] = useState(null);
   const { activeId } = usePatient();
 
@@ -357,10 +359,19 @@ export default function Trends() {
             <span className="pgroup__n num">
               {g.rows.length} test{g.rows.length === 1 ? "" : "s"}
             </span>
+            <button
+              className="pgroup__chart"
+              aria-expanded={openPanel === g.key}
+              onClick={() => setOpenPanel(openPanel === g.key ? null : g.key)}
+            >
+              {openPanel === g.key ? "Hide panel trend" : "Chart this panel"}
+            </button>
             {g.flagged > 0 && (
               <span className="pgroup__flagged num">{g.flagged} out of range</span>
             )}
           </h2>
+
+          {openPanel === g.key && <PanelTrends panel={g.key} patientId={activeId} />}
 
           <ul className="panels">
             {g.rows.map((p) => {
