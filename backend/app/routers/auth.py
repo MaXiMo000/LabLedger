@@ -9,10 +9,10 @@ from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app import access, mailer
+from app import access, mailer, repo
 from app.audit import record
 from app.config import settings
-from app.deps import current_user
+from app.deps import admin_user, current_user
 from app.models.alias import Alias
 from app.models.document import LabDocument
 from app.models.invite import Invite
@@ -857,6 +857,35 @@ async def mfa_enable(
     return RecoveryOut(codes=codes)
 
 
+async def _spend_second_factor(user: User, code: str) -> None:
+    """Accept a TOTP code *or* a recovery code, or raise 401.
+
+    Sign-in has always taken either. These endpoints took only TOTP, which
+    inverted the point of recovery codes: somebody who had lost their
+    authenticator could sign in with a recovery code but could not turn MFA off
+    or mint new ones, because both demanded the code they no longer had. They
+    burned one code per sign-in until none were left and then the account was
+    unreachable — the lockout recovery codes exist to prevent, reached by using
+    them as intended.
+
+    A recovery code is spent here exactly as at sign-in. Both callers go on to
+    replace or clear the whole set, so the spend is belt-and-braces rather than
+    load-bearing — but it keeps "used once" true no matter where it was used.
+    """
+    await guard_code_attempts(user)
+    if verify_totp(decrypt_str(user.mfa_secret_enc) or "", code):
+        await clear_code_failures(user)
+        return
+
+    remaining = take_recovery_code(code, user.recovery_hashes)
+    if remaining is None:
+        await note_code_failure(user)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid verification code")
+    user.recovery_hashes = remaining
+    await user.save()
+    await clear_code_failures(user)
+
+
 @router.post("/mfa/recovery", response_model=RecoveryOut)
 @limiter.limit("10/minute")
 async def mfa_new_recovery_codes(
@@ -864,16 +893,13 @@ async def mfa_new_recovery_codes(
 ):
     """Replace the recovery codes. The old ones stop working immediately.
 
-    Needs a current code: reissuing is how somebody with a borrowed session
-    would mint themselves a permanent way back in.
+    Needs a current code — TOTP or one of the existing recovery codes: reissuing
+    is how somebody with a borrowed session would mint themselves a permanent
+    way back in.
     """
     if not user.mfa_enabled:
         raise HTTPException(status.HTTP_409_CONFLICT, "MFA is not enabled")
-    await guard_code_attempts(user)
-    if not verify_totp(decrypt_str(user.mfa_secret_enc) or "", body.code):
-        await note_code_failure(user)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid verification code")
-    await clear_code_failures(user)
+    await _spend_second_factor(user, body.code)
     codes, user.recovery_hashes = new_recovery_codes()
     await user.save()
     await record("update", "account", str(user.id))
@@ -885,20 +911,68 @@ async def mfa_new_recovery_codes(
 async def mfa_disable(
     request: Request, body: MfaCodeIn, user: User = Depends(current_user),  # noqa: ARG001 - slowapi requires `request` in the signature
 ):
-    """Turn MFA off. Needs a current code — a borrowed session must not."""
+    """Turn MFA off. Needs a current code — a borrowed session must not.
+
+    A recovery code counts, which is the whole point of holding one: losing the
+    authenticator is the ordinary reason to be turning this off.
+    """
     if not user.mfa_enabled:
         raise HTTPException(status.HTTP_409_CONFLICT, "MFA is not enabled")
-    await guard_code_attempts(user)
-    if not verify_totp(decrypt_str(user.mfa_secret_enc) or "", body.code):
-        await note_code_failure(user)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid verification code")
-    await clear_code_failures(user)
+    await _spend_second_factor(user, body.code)
     user.mfa_enabled = False
     user.mfa_secret_enc = None
     user.recovery_hashes = []
     await user.save()
     await record("update", "account", str(user.id))
     return await to_user_out(user)
+
+
+@router.post("/admin/users/{user_id}/mfa/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_reset_mfa(user_id: str, admin: User = Depends(admin_user)):
+    """Clear an enrolment for somebody who has lost every way back in.
+
+    For the case where the authenticator *and* every recovery code are gone.
+    The last resort, and only that. With recovery codes now accepted wherever a
+    TOTP code is, a person holding one needs nobody's help; this exists for the
+    case that used to require editing the database by hand.
+
+    **Never on yourself.** An admin clearing their own enrolment here would skip
+    the code that `/mfa/disable` demands, so a borrowed admin session could
+    strip its own second factor — turning the one route meant to help others
+    into a way to weaken the account holding the privilege.
+
+    **Every session of theirs ends.** An enrolment is being cleared because
+    control of a factor is uncertain, which is the same reason a password reset
+    ends sessions. They sign back in with their password alone, which is the
+    point, and re-enrol from there.
+
+    The grace clock is deliberately *not* reset. Enrolment always works, even
+    past the deadline, so nothing is blocked that they cannot themselves
+    unblock — and handing out a fresh week of reaching shared records without a
+    second factor is not an admin's to give.
+    """
+    target = await User.get(repo._oid(user_id, "Account"))
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such account")
+    if target.id == admin.id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Use /mfa/disable for your own account — it requires a code, and this does not.",
+        )
+    if not target.mfa_enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, "MFA is not enabled on that account")
+
+    target.mfa_enabled = False
+    target.mfa_secret_enc = None
+    target.recovery_hashes = []
+    await target.save()
+    await Session.find(
+        Session.user_id == target.id,
+        Session.revoked_at == None,  # noqa: E711
+    ).update({"$set": {"revoked_at": utcnow()}})
+    # Actor is the admin, subject is the account. Who cleared whose second
+    # factor is the entire value of this record.
+    await record("update", "account", str(target.id), actor=admin)
 
 
 # ---------- Google OAuth (same client as Quiz-App, second redirect URI) ----------

@@ -273,3 +273,137 @@ async def test_the_deadline_is_reported_before_it_bites(client):
     me = (await client.get("/api/auth/me", headers=other)).json()
     assert me["mfa_deadline"] is None
     assert me["mfa_recommended"] is False
+
+
+# --- a lost authenticator is not a lost account ------------------------------
+
+async def test_a_recovery_code_turns_mfa_off(client):
+    """The reason to hold one.
+
+    Sign-in always took a recovery code, but `disable` took only TOTP — so
+    somebody who had lost their phone could get *in* and never get *out*. They
+    spent one code per sign-in until none were left, and then the account was
+    unreachable: the exact lockout recovery codes exist to prevent, arrived at
+    by using them as intended.
+    """
+    h = await register(client)
+    _, codes = await enrol(client, h)
+
+    r = await client.post("/api/auth/mfa/disable", headers=h, json={"code": codes[0]})
+
+    assert r.status_code == 200, r.text
+    assert r.json()["mfa_enabled"] is False
+    user = await User.find_one(User.email == "a@example.com")
+    assert user.recovery_hashes == []
+    assert user.mfa_secret_enc is None
+
+
+async def test_a_recovery_code_mints_a_fresh_set(client):
+    """Same gap on the reissue path: without this, running low on codes with no
+    authenticator to hand had no remedy."""
+    h = await register(client)
+    _, codes = await enrol(client, h)
+
+    r = await client.post("/api/auth/mfa/recovery", headers=h, json={"code": codes[0]})
+
+    assert r.status_code == 200, r.text
+    fresh = r.json()["codes"]
+    assert fresh and set(fresh).isdisjoint(codes)
+    # The old set stops working the moment a new one exists.
+    user = await User.find_one(User.email == "a@example.com")
+    assert all(hash_recovery_code(c) not in user.recovery_hashes for c in codes)
+
+
+async def test_a_spent_recovery_code_does_not_work_twice(client):
+    h = await register(client)
+    _, codes = await enrol(client, h)
+
+    # Spend it at sign-in, then try the same string against disable.
+    await client.post("/api/auth/login", json={
+        "email": "a@example.com", "password": PASSWORD, "code": codes[0]})
+    r = await client.post("/api/auth/mfa/disable", headers=h, json={"code": codes[0]})
+
+    assert r.status_code == 401
+
+
+async def test_a_wrong_code_still_fails_both_ways(client):
+    h = await register(client)
+    await enrol(client, h)
+
+    r = await client.post("/api/auth/mfa/disable", headers=h, json={"code": "000000"})
+
+    assert r.status_code == 401
+    assert (await User.find_one(User.email == "a@example.com")).mfa_enabled is True
+
+
+# --- the admin last resort ---------------------------------------------------
+
+async def make_admin(email="admin@example.com"):
+    user = await User.find_one(User.email == email)
+    user.role = "admin"
+    await user.save()
+    return user
+
+
+async def test_an_admin_clears_an_enrolment_and_ends_their_sessions(client):
+    """For somebody who has lost the authenticator *and* every code."""
+    victim = await register(client, "victim@example.com")
+    await enrol(client, victim)
+    target = await User.find_one(User.email == "victim@example.com")
+
+    admin_h = await register(client, "admin@example.com")
+    await make_admin()
+
+    r = await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=admin_h)
+
+    assert r.status_code == 204, r.text
+    target = await User.find_one(User.email == "victim@example.com")
+    assert target.mfa_enabled is False
+    assert target.recovery_hashes == []
+    # Their sessions end: an enrolment is cleared because control of a factor
+    # is uncertain, the same reason a password reset ends sessions.
+    assert (await client.get("/api/auth/me", headers=victim)).status_code == 401
+
+
+async def test_a_plain_account_cannot_reset_anyone(client):
+    victim = await register(client, "victim@example.com")
+    await enrol(client, victim)
+    target = await User.find_one(User.email == "victim@example.com")
+
+    other = await register(client, "nosy@example.com")
+    r = await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=other)
+
+    assert r.status_code == 403
+    assert (await User.find_one(User.email == "victim@example.com")).mfa_enabled is True
+
+
+async def test_an_admin_cannot_reset_their_own(client):
+    """Otherwise a borrowed admin session strips its own second factor without
+    the code /mfa/disable demands — turning the route meant to help others into
+    a way to weaken the account holding the privilege."""
+    h = await register(client, "admin@example.com")
+    await enrol(client, h)
+    admin = await make_admin()
+
+    r = await client.post(f"/api/auth/admin/users/{admin.id}/mfa/reset", headers=h)
+
+    assert r.status_code == 409
+    assert (await User.find_one(User.email == "admin@example.com")).mfa_enabled is True
+
+
+async def test_the_grace_clock_survives_an_admin_reset(client):
+    """Clearing an enrolment must not hand out a fresh week of reaching shared
+    records without a second factor. Enrolment always works, so nothing is
+    blocked that they cannot themselves unblock."""
+    victim = await register(client, "victim@example.com")
+    await enrol(client, victim)
+    target = await User.find_one(User.email == "victim@example.com")
+    target.mfa_required_since = utcnow() - timedelta(days=99)
+    await target.save()
+
+    admin_h = await register(client, "admin@example.com")
+    await make_admin()
+    await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=admin_h)
+
+    target = await User.find_one(User.email == "victim@example.com")
+    assert target.mfa_required_since is not None

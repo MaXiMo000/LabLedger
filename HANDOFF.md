@@ -237,6 +237,23 @@ account without a second factor is refused *records it did not create*. Sign-in,
 people out of the screen that satisfies it. The clock starts at first access to
 a shared record, not at the grant.
 
+**A recovery code counts wherever a TOTP code does.** Sign-in always took
+either, but `/mfa/disable` and `/mfa/recovery` took only TOTP — so somebody who
+had lost their authenticator could get *in* and never get *out*, spending one
+code per sign-in until none were left. That is the lockout recovery codes exist
+to prevent, reached by using them exactly as intended. `_spend_second_factor`
+is now the single check, and it spends the code like sign-in does.
+
+**An admin can clear an enrolment, and nothing else.** `deps.admin_user` is
+finally used, by one route, for the case where the authenticator *and* every
+code are gone. Never on yourself — that would skip the code `/mfa/disable`
+demands, so a borrowed admin session could strip its own second factor. It ends
+the target's sessions, for the reason a password reset does, and it does *not*
+reset the grace clock: a fresh week of reaching shared records unprotected is
+not an admin's to hand out. The role grants nothing over clinical data; reach
+still comes only from `Access`. Granted by `scripts/make_admin.py`, deliberately
+not by a screen — the first admin has to come from outside the application.
+
 **Wrong codes are throttled per account; passwords are not.** `app/throttle.py`
 — five wrong codes earn a fifteen-minute cooldown, shared across sign-in and
 every MFA route, and it holds against a *correct* code too. Passwords are
@@ -350,14 +367,17 @@ mappings — deciding what a number *is* is clinical.
 
 ## Still outstanding
 
-- **No admin path to reset a lost MFA enrolment.** Lose the authenticator *and*
-  the recovery codes and the account needs a database edit.
 - **`/app/security` and `/app/review/learned` were verified by API and DOM, not
   by eye.** The browser pane stopped returning usable screenshots repeatedly.
 - **Upload drag-and-drop has never been tested with a real file drop.**
-- **No frontend test suite.** Lower value than it looks — the screens are thin
-  over a covered API — except the client auth logic (refresh interceptor, idle
-  lock, role gating), which has real branching.
+- **The admin MFA reset has no screen.** The route exists
+  (`POST /api/auth/admin/users/{id}/mfa/reset`) and the role is granted by
+  `scripts/make_admin.py`; there is no UI for either. Deliberate for now — the
+  route is a last resort and the role should come from someone with database
+  credentials — but it means the operator flow is curl.
+- **No frontend tests beyond the auth client.** `src/api/client.test.js` covers
+  the refresh interceptor; the idle lock and role gating still have none, and
+  they were the other two named as having real branching.
 - **Provenance sheet on mobile** verified by DOM only.
 
 ## Explicitly out of scope
