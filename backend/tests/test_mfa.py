@@ -354,7 +354,8 @@ async def test_an_admin_clears_an_enrolment_and_ends_their_sessions(client):
     admin_h = await register(client, "admin@example.com")
     await make_admin()
 
-    r = await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=admin_h)
+    r = await client.post("/api/auth/admin/mfa/reset", headers=admin_h,
+                          json={"email": "victim@example.com"})
 
     assert r.status_code == 204, r.text
     target = await User.find_one(User.email == "victim@example.com")
@@ -368,10 +369,10 @@ async def test_an_admin_clears_an_enrolment_and_ends_their_sessions(client):
 async def test_a_plain_account_cannot_reset_anyone(client):
     victim = await register(client, "victim@example.com")
     await enrol(client, victim)
-    target = await User.find_one(User.email == "victim@example.com")
 
     other = await register(client, "nosy@example.com")
-    r = await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=other)
+    r = await client.post("/api/auth/admin/mfa/reset", headers=other,
+                          json={"email": "victim@example.com"})
 
     assert r.status_code == 403
     assert (await User.find_one(User.email == "victim@example.com")).mfa_enabled is True
@@ -383,9 +384,10 @@ async def test_an_admin_cannot_reset_their_own(client):
     a way to weaken the account holding the privilege."""
     h = await register(client, "admin@example.com")
     await enrol(client, h)
-    admin = await make_admin()
+    await make_admin()
 
-    r = await client.post(f"/api/auth/admin/users/{admin.id}/mfa/reset", headers=h)
+    r = await client.post("/api/auth/admin/mfa/reset", headers=h,
+                          json={"email": "admin@example.com"})
 
     assert r.status_code == 409
     assert (await User.find_one(User.email == "admin@example.com")).mfa_enabled is True
@@ -403,7 +405,8 @@ async def test_the_grace_clock_survives_an_admin_reset(client):
 
     admin_h = await register(client, "admin@example.com")
     await make_admin()
-    await client.post(f"/api/auth/admin/users/{target.id}/mfa/reset", headers=admin_h)
+    await client.post("/api/auth/admin/mfa/reset", headers=admin_h,
+                      json={"email": "victim@example.com"})
 
     target = await User.find_one(User.email == "victim@example.com")
     assert target.mfa_required_since is not None

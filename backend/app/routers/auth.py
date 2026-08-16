@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app import access, mailer, repo
+from app import access, mailer
 from app.audit import record
 from app.config import settings
 from app.deps import admin_user, current_user
@@ -927,8 +927,14 @@ async def mfa_disable(
     return await to_user_out(user)
 
 
-@router.post("/admin/users/{user_id}/mfa/reset", status_code=status.HTTP_204_NO_CONTENT)
-async def admin_reset_mfa(user_id: str, admin: User = Depends(admin_user)):
+class AdminResetIn(BaseModel):
+    """The account to clear, named the way a human operator has it."""
+
+    email: EmailStr
+
+
+@router.post("/admin/mfa/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_reset_mfa(body: AdminResetIn, admin: User = Depends(admin_user)):
     """Clear an enrolment for somebody who has lost every way back in.
 
     For the case where the authenticator *and* every recovery code are gone.
@@ -951,7 +957,11 @@ async def admin_reset_mfa(user_id: str, admin: User = Depends(admin_user)):
     unblock — and handing out a fresh week of reaching shared records without a
     second factor is not an admin's to give.
     """
-    target = await User.get(repo._oid(user_id, "Account"))
+    # Identified by email, not by id: an operator has the address from whoever
+    # asked, and no way to discover an object id. This is the one route where
+    # naming an account confirms it exists — acceptable because the caller is
+    # already an admin, for whom that is not a disclosure.
+    target = await User.find_one(User.email == body.email.lower())
     if target is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No such account")
     if target.id == admin.id:

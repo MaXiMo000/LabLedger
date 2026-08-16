@@ -378,7 +378,109 @@ export default function Security() {
       <TwoFactor />
       <Password />
       <YourData />
+      {user?.role === "admin" && <AdminTools adminEmail={user.email} />}
     </>
+  );
+}
+
+/**
+ * The one thing the admin role can do, and the only screen it has.
+ *
+ * Shown to nobody else — but the hiding is courtesy, not security: the route
+ * behind it checks the role itself, because a section that renders based on a
+ * field the client was handed is a decoration, not a permission.
+ *
+ * Deliberately the last block on the page, under the account's own settings. An
+ * operator acting on somebody else's account should have had to scroll past
+ * their own.
+ */
+function AdminTools({ adminEmail }) {
+  const [email, setEmail] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState(null);
+  const [error, setError] = useState(null);
+
+  const reset = useMutation({
+    mutationFn: () => api.post("/auth/admin/mfa/reset", { email: email.trim().toLowerCase() }),
+    onSuccess: () => {
+      setDone(email.trim().toLowerCase());
+      setEmail("");
+      setConfirming(false);
+    },
+    onError: (e) => { setError(messageFor(e)); setConfirming(false); },
+  });
+
+  const self = email.trim().toLowerCase() === adminEmail.toLowerCase();
+
+  return (
+    <section className="sec__block sec__block--admin">
+      <div className="sec__head">
+        <h2 className="sec__h">Clear someone's second factor</h2>
+        <span className="sec__badge">admin</span>
+      </div>
+      <p className="sec__note">
+        For an account that has lost its authenticator <em>and</em> every
+        recovery code. Anyone still holding a recovery code can do this
+        themselves under their own Two-factor settings — check that first, because
+        this ends every session they have open.
+      </p>
+
+      <form
+        className="sec__enrol"
+        onSubmit={(e) => { e.preventDefault(); setError(null); setDone(null); setConfirming(true); }}
+      >
+        <label className="field">
+          <span className="field__label">Account email</span>
+          <input
+            className="field__input"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setDone(null); setError(null); }}
+            placeholder="them@example.com"
+          />
+        </label>
+        <button className="btn btn--quiet" disabled={!email.trim() || self || reset.isPending}>
+          {reset.isPending ? "Clearing…" : "Clear second factor"}
+        </button>
+      </form>
+
+      {/* Caught here as well as by the server, so the reason is visible before
+          the click rather than as a rejection after it. */}
+      {self && (
+        <p className="sec__note sec__note--warn">
+          That is your own account. Use Two-factor authentication above — it asks
+          for a code, and this does not.
+        </p>
+      )}
+      {error && <p className="field__error" role="alert">{error}</p>}
+      {done && (
+        <p className="sec__note" role="status">
+          Cleared for {done}. They sign in with their password alone and can
+          enrol again from their own Security screen.
+        </p>
+      )}
+
+      {confirming && (
+        <Modal
+          title={`Clear two-factor for ${email.trim().toLowerCase()}?`}
+          description="Their second factor is removed and every session they have open ends. They will be able to sign in with just their password until they enrol again."
+          tone="danger"
+          onClose={() => setConfirming(false)}
+          footer={
+            <>
+              <button className="btn btn--quiet" onClick={() => setConfirming(false)}>
+                Cancel
+              </button>
+              <button className="btn btn--danger" onClick={() => reset.mutate()}
+                      disabled={reset.isPending}>
+                {reset.isPending ? "Clearing…" : "Clear it"}
+              </button>
+            </>
+          }
+        />
+      )}
+    </section>
   );
 }
 

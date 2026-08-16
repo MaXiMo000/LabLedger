@@ -247,3 +247,25 @@
   .device__ip   { grid-area: ip; justify-self: end; }
   .sec__panic { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---- admin ---------------------------------------------------------------
+   The one block on this page that acts on somebody else's account. Marked
+   rather than styled loudly: a red panel would read as a warning about the
+   reader's own security, which is the opposite of what it is. */
+
+.sec__block--admin { border-top: 1px solid var(--rule-strong); }
+
+.sec__badge {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1px var(--s2);
+}
+
+/* Says why the button is disabled, in the flag colour the rest of the app
+   uses for "this is outside where it should be". */
+.sec__note--warn { color: var(--flag-high); }

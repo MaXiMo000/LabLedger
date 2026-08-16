@@ -352,11 +352,105 @@ data; never below zero; ticks on round numbers.
 **`components/Select.jsx` replaces every `<select>`.** A native option list is
 drawn by the OS and cannot be themed.
 
+**A dialog's focus effect is a mount effect.** `useDialog` keeps `onClose` in a
+ref. With it in the dependency array the effect re-ran on every render — every
+caller passes a fresh arrow — so typing one character into any field inside any
+modal moved focus back to the dialog's first focusable element and the next
+character went nowhere. Fixed in the hook, not in the callers: every dialog with
+an input had it, and one guard where they all route through is smaller than five
+`useCallback`s the next dialog would forget.
+
 **`gemini-3.5-flash`, pinned**, chosen by measurement
 (`scripts/bench_llm_hard.py`). Rerun the bench before changing it.
 
 **`react@19.0.0`, pinned.** `@react-three/fiber` reaches React internals via
 `its-fine`, which broke on 19.2 despite the peer range.
+
+---
+
+## What to build next
+
+Ordered by what the system is currently worst at, not by what is most fun. Each
+says why it matters and what "done" looks like, so a session can start on one
+without re-deriving the case for it.
+
+### 1. LOINC search ranking — the highest-value fix on this list
+
+Typing `hema` into the correction dialog returns **F8 gene mutation panels**,
+not haematocrit or haemoglobin. Confirmed by eye. The search is substring
+matching with no relevance ordering, so a nine-word molecular genetics name
+containing the letters outranks the two-word test the person is obviously
+looking for.
+
+This is not cosmetic. `/app/review/learned` is where a human corrects the
+machine, and a correction screen that cannot surface the right answer pushes
+people towards accepting whatever the cascade guessed — which is precisely the
+failure the review queue exists to catch, reintroduced at the point of repair.
+
+**Done looks like:** exact and prefix matches on `COMPONENT` first, then whole-
+word matches, then substring; shorter names break ties; the analytes the unit
+table knows about rank above those it does not. `scripts/bench_llm_hard.py` is
+the model for how to prove it — a fixture of real printed names with the code a
+human would pick, and a score that has to go up.
+
+### 2. Panel grouping for the review queue and reports
+
+`/app/results` groups by panel now; `/app/review` is still one flat list, and it
+is the screen with forty-four items on it. The same `data/panels.py` map applies
+unchanged. Reviewing a whole CBC at once is also better clinical practice than
+meeting its analytes in alphabetical order.
+
+### 3. Trends across a panel, not one analyte at a time
+
+Every chart today is one analyte. The questions people actually ask are "is my
+whole lipid profile moving" and "did anything change after that medication".
+Overlaying a panel on shared time axes, normalised to each analyte's reference
+interval rather than to raw units, answers both. **Watch:** normalising to the
+interval is a presentation choice that can imply comparability between analytes
+that do not compare — label it plainly and never draw a combined trend line.
+
+### 4. Reference intervals a deployment can actually own
+
+`pipeline/ranges.py` and `pipeline/flags.py` both ship illustrative adult values
+and both say so. A deployment cannot replace them without editing Python. Until
+that is configuration with a provenance field per row — who signed it, when, for
+which population — the honest ceiling on this project stays where it is. This is
+the single biggest gap between "defensible architecture" and "usable in a lab".
+
+### 5. Hardening, in rough order of exposure
+
+- **Rate-limit the upload endpoint.** Extraction is the most expensive thing
+  here and the only unmetered path to it. A free instance with an in-process
+  worker makes this a way to take the API down, not just to run up a bill.
+- **Cap total stored bytes per account.** 25 MB per file, unlimited files.
+- **A retention policy that does something.** Documents are kept forever;
+  `ARCHITECTURE.md` lists retention as out of scope, which is honest but is also
+  the thing an assessor asks about first.
+- **Audit the audit log.** `repo.py` is the choke point and that is the right
+  design, but nothing tests that a route added tomorrow goes through it. A test
+  that enumerates the routers and asserts every data path records something
+  would keep the guarantee true rather than merely intended.
+- **Structured error codes.** `X-Credential-Valid` works but is a one-off. A
+  small `code` field on error bodies would let the client branch on meaning
+  rather than on status plus header plus prose.
+
+### 6. Polish that is worth the time
+
+- **Empty states with a next action.** "0 learned mappings" explains itself well
+  but offers nothing to do.
+- **The upload screen does not say what happens next.** A dropped file goes
+  `queued → extracting → mapping → needs_review`, and only the last one is
+  actionable. Say so on the screen rather than in status labels.
+- **Keyboard path through the review queue.** Confirm/reject/skip without the
+  mouse is the difference between reviewing forty-four items and abandoning it.
+- **`prefers-reduced-motion`.** The cascade scene animates unconditionally.
+- **A real 404 route.** Unknown `/app/*` paths currently render the shell empty.
+
+### Deliberately still not in scope
+
+EHR/FHIR, clinical validation against an adjudicated gold set, a signed BAA,
+KMS, breach procedure. Nothing above changes that, and nothing above should be
+read as moving towards certification.
 
 ---
 
@@ -381,18 +475,21 @@ mappings — deciding what a number *is* is clinical.
 
 ## Still outstanding
 
-- **`/app/security` and `/app/review/learned` were verified by API and DOM, not
-  by eye.** The browser pane stopped returning usable screenshots repeatedly.
-- **Upload drag-and-drop has never been tested with a real file drop.**
-- **The admin MFA reset has no screen.** The route exists
-  (`POST /api/auth/admin/users/{id}/mfa/reset`) and the role is granted by
-  `scripts/make_admin.py`; there is no UI for either. Deliberate for now — the
-  route is a last resort and the role should come from someone with database
-  credentials — but it means the operator flow is curl.
-- **No frontend tests beyond the auth client.** `src/api/client.test.js` covers
-  the refresh interceptor; the idle lock and role gating still have none, and
-  they were the other two named as having real branching.
-- **Provenance sheet on mobile** verified by DOM only.
+- **Provenance sheet on mobile** is still verified by DOM only. `/app/security`,
+  `/app/review/learned` (populated, and its correction dialog) and a real
+  drag-and-drop file drop have now all been seen by eye and behave.
+- **Granting the admin role is still a script**, by design —
+  `scripts/make_admin.py`. The reset itself now has a screen, shown only to
+  admins at the foot of `/app/security`. **No account holds the role right now**;
+  the demo account was promoted to verify the screen and demoted immediately,
+  because a publicly-reachable demo must never carry it.
+- **Client-side role gating is one boolean** (`active.role === "owner"`, hiding
+  owner-only sections on the Record screen) and is not worth a component test
+  harness — the enforcement is server-side and `test_access.py` covers it. The
+  handoff used to call this "real branching"; having read it, that was
+  overstated.
+- **The LOINC search ranks badly** — see item 1 under *What to build next*. It
+  is listed there rather than here because it is work, not a gap in testing.
 
 ## Explicitly out of scope
 

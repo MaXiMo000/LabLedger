@@ -16,13 +16,27 @@ import { useEffect, useRef } from "react";
 const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"];
 const EARLY_MS = 60_000;
 
+/**
+ * How long to wait before locking, given the server's idle timeout.
+ *
+ * Exported because it is the one part of this hook that can be wrong in a way
+ * nobody would notice until it mattered. The floor is doing real work: without
+ * it a server timeout of a minute or less computes to zero or negative, which
+ * `setTimeout` treats as "immediately" — the screen would lock the instant it
+ * loaded, clear, reload, and lock again. A lock screen you cannot get past
+ * looks like the session system is broken rather than like a short timeout.
+ */
+export function idleDelayMs(minutes) {
+  return Math.max(minutes * 60_000 - EARLY_MS, 60_000);
+}
+
 export function useIdleSignOut(minutes, onIdle) {
   const fire = useRef(onIdle);
   fire.current = onIdle;
 
   useEffect(() => {
     if (!minutes) return undefined;
-    const after = Math.max(minutes * 60_000 - EARLY_MS, 60_000);
+    const after = idleDelayMs(minutes);
     let timer;
 
     const reset = () => {
