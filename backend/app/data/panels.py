@@ -130,6 +130,14 @@ UNITLESS: frozenset[str] = frozenset({
 OTHER_KEY = "other"
 OTHER_LABEL = "Other results"
 
+# For the review queue, where a row may have no proposed code at all. That is a
+# different statement from `OTHER`: "this is a result and we do not know which
+# panel prints it" versus "we do not yet know what this test is". Collapsing
+# them would file the rows that need the most work under a heading that reads
+# like a tidy leftovers drawer.
+UNMATCHED_KEY = "unmatched"
+UNMATCHED_LABEL = "Not recognised yet"
+
 # Built once at import. A code listed under two panels is a mistake in the
 # table above rather than something to resolve at lookup time, so it is caught
 # here instead of silently taking whichever entry happened to be last.

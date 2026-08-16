@@ -187,15 +187,53 @@ export default function Review() {
         from then on.
       </p>
 
-      <ul className="ritems">
-        {items.map((item) => (
-          <Item
-            key={item.observation_id}
-            item={item}
-            onDone={() => setConfirmed((n) => n + 1)}
-          />
-        ))}
-      </ul>
+      {groupQueue(items).map((g) => (
+        <section key={g.key} className="rgroup">
+          <h2 className="rgroup__h">
+            <span className="rgroup__label">{g.label}</span>
+            <span className="rgroup__n num">
+              {g.rows.length} to confirm
+            </span>
+          </h2>
+          <ul className="ritems">
+            {g.rows.map((item) => (
+              <Item
+                key={item.observation_id}
+                item={item}
+                onDone={() => setConfirmed((n) => n + 1)}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
     </>
   );
+}
+
+/**
+ * The queue under the headings a report prints, in a report's own order.
+ *
+ * No triage sort here, unlike the results screen. Every row in this list needs
+ * the same thing — a human to look at it — so there is nothing to rank by, and
+ * inventing an order would only make the list less predictable to work down.
+ * Reviewing a blood count as a blood count also beats meeting its analytes
+ * alphabetically between a lipid and a thyroid test.
+ *
+ * "Not recognised yet" sits last: those rows have no proposal, so they need a
+ * search rather than a yes or no, and they are the slowest work in the list.
+ */
+function groupQueue(items) {
+  const groups = new Map();
+  for (const item of items) {
+    if (!groups.has(item.panel)) {
+      groups.set(item.panel, { key: item.panel, label: item.panel_label, rows: [] });
+    }
+    groups.get(item.panel).rows.push(item);
+  }
+  // Named panels, then the results whose panel is unknown, then the rows we
+  // cannot name at all. Ordered by how much work each needs: a proposed code
+  // is a yes or no, "Other results" is still a yes or no, and "Not recognised
+  // yet" is a search.
+  const rank = (k) => (k === "unmatched" ? 2 : k === "other" ? 1 : 0);
+  return [...groups.values()].sort((a, b) => rank(a.key) - rank(b.key));
 }

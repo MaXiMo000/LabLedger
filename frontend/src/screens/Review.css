@@ -58,3 +58,31 @@
   .cand { grid-template-columns: 1fr; gap: 2px; }
   .cand__why { white-space: normal; }
 }
+
+/* ---- panel headings ------------------------------------------------------
+   Matches .pgroup__h on the results screen deliberately: the same taxonomy,
+   so it should read as the same divider rather than as a second convention
+   the reader has to learn. Not shared into a common stylesheet for two rules
+   — the duplication is smaller than the indirection would be. */
+
+.rgroup + .rgroup { margin-top: var(--s6); }
+
+.rgroup__h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin: 0 0 var(--s3);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.rgroup__n {
+  margin-left: auto;
+  color: var(--ink-faint);
+  text-transform: none;
+  letter-spacing: normal;
+}

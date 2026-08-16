@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from app import access, repo
 from app.audit import record
+from app.data.panels import UNMATCHED_KEY, UNMATCHED_LABEL, panel_for
 from app.deps import current_user
 from app.models.alias import Alias
 from app.models.document import LabDocument
@@ -61,6 +62,11 @@ class ReviewItem(BaseModel):
     confidence: float
     reason: str
     candidates: list[CandidateOut]
+    # The heading this row is reviewed under. Taken from the *proposed* code,
+    # so it moves if the proposal is wrong — which is honest: the grouping is a
+    # claim about what the cascade thinks, not about what the test is.
+    panel: str = UNMATCHED_KEY
+    panel_label: str = UNMATCHED_LABEL
 
 
 class SearchHit(BaseModel):
@@ -300,7 +306,12 @@ async def queue(
                     system=entry.system, why="current proposal",
                 ))
 
+        panel_key, panel_label = (
+            panel_for(obs.loinc_code) if obs.loinc_code
+            else (UNMATCHED_KEY, UNMATCHED_LABEL)
+        )
         items.append(ReviewItem(
+            panel=panel_key, panel_label=panel_label,
             observation_id=str(obs.id), document_id=str(obs.document_id),
             collected_at=obs.collected_at, raw_name=obs.raw_name,
             raw_value=obs.raw_value, raw_unit=obs.raw_unit,

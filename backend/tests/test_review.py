@@ -240,3 +240,39 @@ async def test_search_ranks_by_how_commonly_a_test_is_ordered(client):
     # Nothing with a real rank may appear after an unranked one.
     if 0 in ranks:
         assert all(r == 0 for r in ranks[ranks.index(0):])
+
+
+# --- the queue is grouped the way a report is printed -----------------------
+
+async def test_queue_items_carry_the_panel_they_are_reviewed_under(client):
+    """Same map as the results screen, so the two screens agree on what a
+    blood count is."""
+    h, pid, _ = await setup_doc(client)
+    items = (await client.get(f"/api/review/{pid}", headers=h)).json()
+    assert items
+
+    for it in items:
+        assert it["panel"] and it["panel_label"]
+        if it["proposed_loinc"] is None:
+            # No proposal is not the same claim as "a result we cannot file".
+            assert it["panel"] == "unmatched", it["raw_name"]
+
+    proposed = [i for i in items if i["proposed_loinc"]]
+    if proposed:
+        from app.data.panels import panel_for
+        for it in proposed:
+            assert it["panel"] == panel_for(it["proposed_loinc"])[0]
+
+
+async def test_an_unproposed_row_is_not_filed_as_other(client):
+    """`other` means "a result whose panel is unknown"; `unmatched` means "we do
+    not know what this test is". Collapsing them buries the rows needing the
+    most work under a heading that reads like leftovers."""
+    from app.data.panels import OTHER_KEY, UNMATCHED_KEY
+    assert OTHER_KEY != UNMATCHED_KEY
+
+    h, pid, _ = await setup_doc(client)
+    items = (await client.get(f"/api/review/{pid}", headers=h)).json()
+    for it in items:
+        if it["proposed_loinc"] is None:
+            assert it["panel"] != OTHER_KEY

@@ -400,12 +400,25 @@ endpoint directly separated them. `scripts/` has no bench for search; the tests
 in `test_review.py` pin top hits instead, which is the cheaper version of the
 same discipline.
 
-### 2. Panel grouping for the review queue and reports
+### 2. ~~Panel grouping for the review queue~~ — done
 
-`/app/results` groups by panel now; `/app/review` is still one flat list, and it
-is the screen with forty-four items on it. The same `data/panels.py` map applies
-unchanged. Reviewing a whole CBC at once is also better clinical practice than
-meeting its analytes in alphabetical order.
+The queue groups by the panel of the *proposed* code, so it moves if the
+proposal is wrong. That is honest: the heading is a claim about what the cascade
+currently thinks, not about what the test is.
+
+Two leftover groups, not one, and the distinction is the point. **Other
+results** means "a result whose panel is not in the map"; **Not recognised yet**
+means "no proposed code at all". Collapsing them would file the rows needing the
+most work under a heading that reads like a tidy leftovers drawer. Ordered by
+how much work each needs — a proposal is a yes or no, an unmatched row is a
+search — so *Not recognised yet* sits last.
+
+No triage sort, unlike the results screen: every row here needs the same thing,
+so there is nothing to rank by and inventing an order would only make the list
+less predictable to work down.
+
+**Reports is still ungrouped** — it lists documents rather than analytes, so the
+map does not apply to it unchanged. Left out deliberately rather than forgotten.
 
 ### 3. Trends across a panel, not one analyte at a time
 
