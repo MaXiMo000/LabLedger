@@ -1,0 +1,9 @@
+{
+  "loinc_release": "2.82",
+  "source_file": "LoincTable/Loinc.csv",
+  "subset_sha256": "8d2c88425f3ae731add749ad1ded6aa0efbb5fd4e24542ff4246964668134226",
+  "subset_bytes": 3923959,
+  "filter": "STATUS=ACTIVE AND CLASSTYPE=1 AND ORDER_OBS in (Observation,Both) AND no external copyright",
+  "rebuild": "python scripts/build_loinc_subset.py <extracted LOINC release dir>",
+  "license": "LOINC and RELMA are registered trademarks of Regenstrief Institute, Inc. Used under the LOINC License v5.8 (see LOINC_LICENSE.txt)."
+}

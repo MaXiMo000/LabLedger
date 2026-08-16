@@ -1,0 +1,70 @@
+.rail {
+  position: relative;
+  display: block;
+  flex: none;
+}
+
+/* The full rail: the measurable span including out-of-range overflow. */
+.rail__line {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--rule);
+  transform: translateY(-50%);
+}
+
+.rail__line--absent {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--rule) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* The reference interval itself: darker, so "inside the range" is legible
+   before any colour is read. */
+.rail__band {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  background: color-mix(in srgb, var(--ink) 26%, transparent);
+  transform: translateY(-50%);
+  border-radius: 1px;
+}
+
+/* The measurement. A vertical tick, not a dot: it reads as an instrument
+   marking rather than a chart point. */
+.rail__tick {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  background: var(--ink);
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+}
+
+/* ---- sizes ------------------------------------------------------------ */
+
+.rail--inline { width: 68px; height: 14px; }
+.rail--inline .rail__tick { height: 11px; }
+
+.rail--panel { width: 100%; height: 20px; }
+.rail--panel .rail__tick { height: 15px; }
+.rail--panel .rail__band { height: 4px; }
+
+.rail--full { width: 100%; height: 28px; }
+.rail--full .rail__tick { height: 20px; width: 2px; }
+.rail--full .rail__band { height: 5px; }
+
+/* ---- flags ------------------------------------------------------------
+   Colour reinforces a position that is already visible. The tick sitting in
+   the overflow zone is the primary signal; the hue is the second. */
+
+.rail--high .rail__tick { background: var(--flag-high); }
+.rail--low  .rail__tick { background: var(--flag-low); }
+.rail--normal .rail__tick,
+.rail--unknown .rail__tick { background: var(--ink); }
+
+.rail--high .rail__band { background: color-mix(in srgb, var(--flag-high) 34%, transparent); }
+.rail--low  .rail__band { background: color-mix(in srgb, var(--flag-low) 34%, transparent); }

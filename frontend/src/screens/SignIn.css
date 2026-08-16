@@ -1,0 +1,120 @@
+.signin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  /* One hairline of structure so the form is not floating in a void. */
+  background:
+    linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 100% 100vh no-repeat,
+    var(--paper);
+}
+
+.signin__grid {
+  width: 100%;
+  max-width: 60rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: clamp(var(--s6), 7vw, var(--s9));
+  align-items: center;
+}
+
+.signin__panel { max-width: 24rem; }
+
+.signin__mark {
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.signin__title {
+  margin-top: var(--s6);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.signin__sub {
+  margin-top: var(--s3);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 34ch;
+}
+
+.signin__form { margin-top: var(--s6); }
+.signin__submit { justify-content: center; width: 100%; margin-top: var(--s1); }
+
+/* A rule with the word sitting in it, rather than a floating word. */
+.signin__or {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s3);
+  margin-block: var(--s5);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+.signin__or::before,
+.signin__or::after { content: ""; height: 1px; background: var(--rule); }
+
+.signin__google { justify-content: center; width: 100%; }
+
+.signin__switch {
+  margin-top: var(--s5);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+}
+.signin__toggle {
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid var(--accent);
+}
+
+/* ---- the proof column -------------------------------------------------- */
+
+.signin__proof {
+  padding: var(--s5);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-1);
+}
+
+.proof { list-style: none; margin: var(--s4) 0 0; padding: 0; }
+
+.proof__row { padding-block: var(--s4); border-top: 1px solid var(--rule); }
+
+.proof__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.proof__printed { font-size: var(--text-small); color: var(--ink); }
+.proof__lab { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.proof__reading {
+  display: grid;
+  grid-template-columns: auto auto minmax(70px, 1fr);
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+.proof__value { font-size: 1.125rem; font-weight: 500; color: var(--ink); line-height: 1; }
+.proof__unit  { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.proof__note {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule-strong);
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+}
+
+/* The proof column is supporting evidence, not the task. On a phone it would
+   push the form below the fold, so it goes. */
+@media (max-width: 820px) {
+  .signin__grid { grid-template-columns: 1fr; max-width: 24rem; }
+  .signin__proof { display: none; }
+  .signin { place-items: start center; padding-top: var(--s8); }
+}

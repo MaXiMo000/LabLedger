@@ -1,0 +1,41 @@
+/* A single centred sheet. There is one decision on this page and nothing to
+   compare it against, so the split layout the sign-in screen uses would be
+   two-thirds empty. */
+
+.inv {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: var(--paper);
+}
+
+.inv__panel {
+  width: 100%;
+  max-width: 34rem;
+  display: grid;
+  gap: var(--s4);
+  padding: var(--s7);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-1);
+  animation: rise var(--dur-3) var(--ease-out) backwards;
+}
+
+.inv__mark {
+  font-weight: 600;
+  font-size: var(--text-small);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+}
+
+.inv__title { font-size: var(--text-h3); font-weight: 500; }
+
+.inv__body { font-size: var(--text-small); color: var(--ink-muted); }
+.inv__body--faint { color: var(--ink-faint); font-size: var(--text-caption); }
+
+.inv__go { justify-self: start; }
+
+/* The shared .boot is full-height; inside the panel it only needs its own row. */
+.inv__panel .boot { min-height: 4rem; }

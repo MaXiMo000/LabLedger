@@ -1,0 +1,69 @@
+.shell { min-height: 100vh; }
+
+/* A rule, not a shadow. The bar belongs to the page, not floating over it. */
+.shell__bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.shell__bar-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s6);
+  height: 3.5rem;
+}
+
+.shell__mark {
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.shell__nav { display: flex; gap: var(--s5); margin-right: auto; }
+
+.shell__link {
+  position: relative;
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  padding-block: 0.25rem;
+  transition: color var(--dur-1) var(--ease);
+}
+.shell__link:hover { color: var(--ink); }
+
+/* The active tab is marked by a rule that meets the bar's own border, so the
+   nav reads as part of the page frame rather than as a pill. */
+.shell__link--on { color: var(--ink); }
+.shell__link--on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--s4) - 1px);
+  height: 1px;
+  background: var(--ink);
+}
+
+.shell__account { display: flex; align-items: center; gap: var(--s4); }
+.shell__who { font-size: var(--text-caption); color: var(--ink-faint); }
+.shell__signout {
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease);
+}
+.shell__signout:hover { color: var(--ink); }
+
+.shell__main { padding-block: var(--s7) var(--s9); }
+
+@media (max-width: 640px) {
+  .shell__bar-inner { height: auto; padding-block: var(--s3); flex-wrap: wrap; gap: var(--s3); }
+  .shell__nav { order: 3; width: 100%; gap: var(--s4); }
+  .shell__link--on::after { bottom: -0.5rem; }
+  .shell__account { margin-left: auto; }
+  .shell__who { display: none; }
+  .shell__main { padding-block: var(--s6) var(--s8); }
+}

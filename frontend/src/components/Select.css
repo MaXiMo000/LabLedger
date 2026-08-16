@@ -1,0 +1,112 @@
+/* The closed trigger is a .field__input that happens to be a button, so a
+   select sitting beside a text input in a row lines up to the pixel. The open
+   menu borrows the patient switcher's popover language for the same reason:
+   one kind of floating list in the product, not two. */
+
+.sel { position: relative; }
+
+.sel__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-size: var(--text-small);
+  text-align: left;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.sel__trigger:hover { border-color: var(--ink-faint); }
+.sel__trigger--open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+.sel__value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sel__hint { color: var(--ink-faint); }
+
+/* Drawn rather than typed: a glyph caret sits on the text baseline and shifts
+   with the font, a border triangle sits where it is put. */
+.sel__caret {
+  flex: none;
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--ink-faint);
+  transition: transform var(--dur-1) var(--ease);
+}
+.sel__trigger--open .sel__caret { transform: rotate(180deg); }
+
+.sel__menu {
+  position: absolute;
+  top: calc(100% + var(--s1));
+  left: 0;
+  right: 0;
+  z-index: 40;
+  list-style: none;
+  margin: 0;
+  padding: var(--s1);
+  max-height: 15rem;
+  overflow-y: auto;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-2);
+  /* Slides, never fades. A menu that animates its opacity is briefly
+     see-through, and for those frames you are reading the page text straight
+     through the options — which looks like a rendering fault rather than a
+     transition. The sheet arrives opaque and moves into place. */
+  transform-origin: top center;
+  animation: sel-in var(--dur-1) var(--ease-out) both;
+}
+
+@keyframes sel-in {
+  from { transform: translateY(-3px); }
+  to   { transform: none; }
+}
+
+/* A fixed gutter for the tick, so the labels align whether or not a row is
+   the chosen one — the column exists even when it is empty. Lab reports mark
+   a result; they do not reflow the page around the mark. */
+.sel__opt {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--s2);
+  row-gap: 1px;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.sel__tick {
+  grid-row: span 2;
+  align-self: center;
+  font-size: var(--text-small);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.sel__opt-label { font-size: var(--text-small); color: var(--ink); }
+.sel__opt-hint  { grid-column: 2; font-size: var(--text-caption); color: var(--ink-faint); }
+
+/* Two states, and they mean different things: --cursor is where the keyboard
+   is, --on is what the value actually is. Collapsing them into one highlight
+   is what makes a custom listbox feel like it lost your place. */
+.sel__opt--cursor { background: var(--paper-sunk); }
+.sel__opt--on .sel__opt-label { color: var(--accent); font-weight: 500; }
+.sel__opt--on.sel__opt--cursor { background: var(--accent-wash); }
+
+@media (max-width: 480px) {
+  /* Thumb-sized rows once there is no pointer to aim with. */
+  .sel__opt { padding: var(--s3); }
+}

@@ -1,0 +1,252 @@
+.cascade {
+  padding-block: var(--s9);
+  border-bottom: 1px solid var(--rule);
+}
+
+.cascade__head { max-width: 46rem; }
+
+.cascade__title {
+  font-size: var(--text-h2);
+  margin-top: var(--s4);
+  max-width: 22ch;
+}
+.cascade__title-em { color: var(--ink-muted); font-weight: 400; }
+
+.cascade__lede {
+  margin-top: var(--s4);
+  color: var(--ink-body);
+  max-width: 52ch;
+}
+
+/* ---- sample chips ------------------------------------------------------ */
+
+.cascade__samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s6);
+}
+
+.chip {
+  padding: 0.375rem 0.75rem;
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease),
+              color var(--dur-1) var(--ease),
+              background var(--dur-1) var(--ease);
+}
+.chip:hover { border-color: var(--ink-faint); color: var(--ink); }
+
+/* Selected state is weight and ink, not a fill: the chips are a control
+   strip, not a row of buttons competing with the primary action. */
+.chip--on {
+  color: var(--paper-raised);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* ---- layout ------------------------------------------------------------ */
+
+.cascade__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: var(--s7);
+  align-items: start;
+  margin-top: var(--s5);
+}
+
+.cascade__stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cascade__stage canvas { display: block; }
+
+.cascade__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.cascade__caption {
+  position: absolute;
+  left: var(--s4);
+  bottom: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-small);
+  color: var(--ink);
+  pointer-events: none;
+}
+.cascade__caption-meta { font-size: var(--text-caption); color: var(--ink-faint); }
+
+/* ---- stage list -------------------------------------------------------- */
+
+.stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.stage,
+.review {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr auto;
+  grid-template-areas: "n name mark" ". kicker kicker";
+  gap: 0 var(--s3);
+  width: 100%;
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  cursor: default;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.stage { cursor: pointer; }
+.stage--on { background: var(--paper-sunk); }
+
+.stage__n    { grid-area: n; font-size: var(--text-caption); color: var(--ink-faint); }
+.stage__name { grid-area: name; font-size: var(--text-small); color: var(--ink); font-weight: 500; }
+.stage__kicker {
+  grid-area: kicker;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.45;
+}
+.stage__mark {
+  grid-area: mark;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* A passed stage recedes; the holding stage takes the accent and the weight.
+   The word "held" carries it too — never colour alone. */
+.stage--passed .stage__name { color: var(--ink-faint); font-weight: 400; }
+.stage--caught .stage__name { color: var(--accent); }
+.stage--caught .stage__mark { color: var(--accent); }
+.stage--caught .stage__n    { color: var(--accent); }
+
+.review { color: var(--ink-faint); }
+.review--on .stage__name,
+.review--on .stage__mark { color: var(--flag-high); }
+
+/* ---- detail panel ------------------------------------------------------ */
+
+.cascade__detail {
+  margin-top: var(--s6);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--rule-strong);
+  /* Reserved height: the panel swaps content on hover and must not reflow
+     the page underneath it. */
+  min-height: 8.5rem;
+}
+
+.cascade__what {
+  margin-top: var(--s3);
+  font-size: var(--text-lead);
+  color: var(--ink);
+  max-width: 46ch;
+}
+
+.cascade__why {
+  margin-top: var(--s3);
+  color: var(--ink-muted);
+  max-width: 62ch;
+}
+
+/* ---- narrow ------------------------------------------------------------
+   The scene is the least useful thing on a phone — depth needs width to
+   read, and there is no cursor to lean it with. It stays, shorter, and the
+   list moves above it so the explanation leads. */
+
+@media (max-width: 900px) {
+  .cascade { padding-block: var(--s8); }
+  .cascade__body { grid-template-columns: 1fr; gap: var(--s5); }
+  .cascade__stage { aspect-ratio: 16 / 11; order: 2; }
+  .stages { order: 1; }
+  .cascade__title { font-size: 1.625rem; max-width: 24ch; }
+}
+
+@media (max-width: 560px) {
+  .cascade__stage { aspect-ratio: 5 / 4; }
+  .cascade__samples { gap: var(--s1); }
+  .chip { font-size: var(--text-caption); padding: 0.3rem 0.55rem; }
+  .cascade__detail { min-height: 11rem; }
+}
+
+/* ---- still cascade (no-WebGL fallback) ---------------------------------
+   The same recession, done with transforms. Kept visually identical to the
+   scene so the section reads the same either way. */
+
+.still {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  perspective: 900px;
+  perspective-origin: 58% 42%;
+}
+
+.still__space {
+  position: relative;
+  width: 62%;
+  aspect-ratio: 3 / 2;
+  transform-style: preserve-3d;
+  transform: rotateX(11deg) rotateY(-19deg);
+}
+
+.still__plate {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--ink-faint);
+  transform: translateZ(calc(var(--i) * -74px));
+  transition: opacity var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
+  opacity: 0.13;
+}
+
+.still__plate--caught {
+  background: var(--accent);
+  border-color: var(--accent);
+  opacity: 0.92;
+}
+
+.still__plate--on { opacity: 0.4; }
+.still__plate--caught.still__plate--on { opacity: 1; }
+
+.still__plate-n {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: var(--text-caption);
+  color: var(--paper);
+  opacity: 0.8;
+}
+
+/* The token: the printed name, resting on whichever plate held it. */
+.still__token {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  height: 13%;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translate(-50%, -50%) translateZ(calc(var(--i) * -74px + 26px));
+  transition: transform var(--dur-3) var(--ease-out);
+  box-shadow: var(--lift-2);
+}
+
+.still__token--unresolved { background: var(--flag-high); }

@@ -1,0 +1,66 @@
+.modal__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--s5);
+  background: rgb(17 17 18 / 0.32);
+  animation: modal-fade var(--dur-2) var(--ease);
+}
+
+.modal {
+  width: min(30rem, 100%);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-2);
+  animation: modal-in var(--dur-2) var(--ease-out);
+}
+
+@keyframes modal-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(6px) }
+  to   { opacity: 1; transform: none }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal__scrim, .modal { animation: none; }
+}
+
+.modal__head { padding: var(--s5) var(--s5) var(--s4); }
+
+.modal__title {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.modal__desc {
+  margin-top: var(--s2);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+}
+
+.modal__body { padding: 0 var(--s5) var(--s2); display: grid; gap: var(--s4); }
+
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5) var(--s5);
+}
+
+/* A destructive dialog is marked by one hairline in the flag tone, not by a
+   red panel: the severity belongs to the action, not the container. */
+.modal--danger .modal__head { border-top: 2px solid var(--flag-high); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+
+.btn--danger { background: var(--flag-high); color: #fff; }
+.btn--danger:hover { background: color-mix(in srgb, var(--flag-high) 85%, black); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 480px) {
+  .modal__scrim { padding: 0; place-items: end stretch; }
+  .modal { width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .modal__foot { flex-direction: column-reverse; }
+  .modal__foot .btn { justify-content: center; }
+}

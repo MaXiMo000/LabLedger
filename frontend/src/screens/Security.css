@@ -1,0 +1,249 @@
+/* Account security, read as a panel of readings.
+ *
+ * The screen borrowed Record.css while it was three lines of text. It has its
+ * own shapes now — a device row is not a grant row, and a key to be copied
+ * into an authenticator is not a form field — so it owns its stylesheet.
+ *
+ * The one carried-over idea is the report's: state a reading, and flag it when
+ * it sits outside what this account should be at. Two-factor off on an account
+ * that reaches somebody else's record is genuinely out of range, and it is
+ * marked the same quiet way a high ferritin is: a tone and a word, no alarm. */
+
+.sec__block {
+  padding-block: var(--s6);
+  border-top: 1px solid var(--rule);
+}
+.sec__block:first-of-type { border-top: none; }
+
+.sec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s2);
+}
+
+.sec__h { font-size: var(--text-h3); font-weight: 500; }
+
+.sec__note {
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 60ch;
+  margin-bottom: var(--s4);
+}
+
+/* ---- state chip ---------------------------------------------------------
+   Mono and uppercase, like the H/L flag printed beside a value. Wash rather
+   than a solid fill: a flag on a report is ink on paper, not a badge. */
+
+.sec__chip {
+  flex: none;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  padding: 2px var(--s2);
+  border-radius: var(--radius);
+  color: var(--flag-normal);
+  background: var(--paper-sunk);
+}
+.sec__chip--on   { color: var(--flag-low); background: var(--flag-low-wash); }
+.sec__chip--flag { color: var(--flag-high); background: var(--flag-high-wash); }
+
+/* ---- devices ------------------------------------------------------------
+   Ruled rows. The columns are fixed so last-used runs down one line and can
+   be scanned for the one that is not you. */
+
+.devices { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+
+.device {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.device__name {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  font-size: var(--text-small);
+  color: var(--ink);
+}
+.device__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Not "— this device" in prose: the row is a list entry, and the thing you
+   need to know before clicking End session is whether it is the one you are
+   sitting at. */
+.device__here {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 1px var(--s2);
+  border-radius: var(--radius);
+}
+
+.device__ip   { font-size: var(--text-caption); color: var(--ink-faint); }
+.device__seen { font-size: var(--text-caption); color: var(--ink-muted); }
+
+.device__end {
+  justify-self: end;
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.device__end:hover { color: var(--flag-high); border-bottom-color: var(--flag-high); }
+.device__end[disabled] { opacity: 0.5; cursor: default; }
+
+/* ---- the last resort ----------------------------------------------------
+   Set apart in a sunk well rather than left as a link inside a sentence: it
+   ends every session including this one, and an action that logs you out of
+   your own screen should not sit at the weight of body text. */
+
+.sec__panic {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-top: var(--s5);
+  padding: var(--s3) var(--s4);
+  background: var(--paper-sunk);
+  border-radius: var(--radius);
+}
+.sec__panic p { font-size: var(--text-small); color: var(--ink-muted); margin: 0; }
+
+.sec__panic button {
+  flex: none;
+  font-size: var(--text-small);
+  color: var(--flag-high);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.sec__panic button:hover { border-bottom-color: var(--flag-high); }
+
+/* ---- enrolment ----------------------------------------------------------
+   The key is shown as text rather than a QR: rendering one needs a library,
+   and every authenticator accepts a typed key. It is set in mono, spaced, and
+   broken into groups, because it is transcribed by hand exactly once. */
+
+.sec__enrol { display: grid; gap: var(--s4); max-width: 30rem; margin-top: var(--s4); }
+
+.sec__key {
+  padding: var(--s3) var(--s4);
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.sec__key dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sec__key dd {
+  margin: var(--s1) 0 0;
+  font-size: var(--text-small);
+  color: var(--ink);
+  word-break: break-all;
+}
+.sec__key dd.sec__secret { letter-spacing: 0.12em; }
+.sec__key div + div { margin-top: var(--s3); }
+
+/* A six-digit code is six characters wide. A full-width box invites a
+   sentence. */
+.sec__code { max-width: 9rem; letter-spacing: 0.3em; }
+
+.sec__actions { display: flex; gap: var(--s3); align-items: center; }
+
+/* Stated before it bites. Muted while it is a date in the future; the flag
+   tone only once it is a closed door. */
+.sec__deadline {
+  margin-block: var(--s3) var(--s4);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  border-left: 2px solid var(--rule-strong);
+  padding-left: var(--s3);
+  max-width: 60ch;
+}
+.sec__deadline--past { color: var(--flag-high); border-left-color: var(--flag-high); }
+
+/* ---- the QR -------------------------------------------------------------
+   The SVG arrives sized in modules, so one rule scales it and `currentColor`
+   makes it take the page's ink instead of pasting black onto warm paper. */
+
+.qr { display: grid; justify-items: center; padding-block: var(--s2) var(--s4); }
+
+.qr__code {
+  color: var(--ink);
+  background: var(--paper-raised);
+  padding: var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.qr__code svg {
+  display: block;
+  width: 12rem;
+  height: 12rem;
+  /* Modules are whole pixels; smoothing them is what makes a QR fail to scan. */
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+.qr__manual {
+  justify-self: center;
+  display: block;
+  margin: 0 auto var(--s4);
+  font-size: var(--text-small);
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.qr__manual:hover { border-bottom-color: var(--accent); }
+
+/* ---- recovery codes -----------------------------------------------------
+   Two columns of tabular figures, the way a printed sheet of them looks —
+   because that is what these are for. */
+
+.recovery {
+  list-style: none;
+  margin: 0;
+  padding: var(--s4);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2) var(--s5);
+  background: var(--paper-sunk);
+  border-radius: var(--radius);
+  font-size: var(--text-small);
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .recovery { grid-template-columns: 1fr; }
+  .qr__code svg { width: 9rem; height: 9rem; }
+}
+
+@media (max-width: 760px) {
+  .device {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name end" "seen ip";
+    row-gap: var(--s1);
+  }
+  .device__name { grid-area: name; }
+  .device__end  { grid-area: end; }
+  .device__seen { grid-area: seen; }
+  .device__ip   { grid-area: ip; justify-self: end; }
+  .sec__panic { flex-direction: column; align-items: flex-start; }
+}

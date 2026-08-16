@@ -1,0 +1,15 @@
+{
+  "name": "labledger",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lab result normalization — FastAPI + React + MongoDB",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "api": "cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000",
+    "worker": "cd backend && .venv/bin/arq app.worker.WorkerSettings",
+    "test": "cd backend && .venv/bin/python -m pytest -q",
+    "lint": "cd backend && .venv/bin/ruff check app scripts tests"
+  }
+}

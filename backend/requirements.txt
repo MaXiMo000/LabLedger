@@ -1,0 +1,27 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+beanie==1.29.0
+pydantic-settings==2.7.1
+pyjwt==2.10.1
+bcrypt==4.2.1
+authlib==1.4.0
+httpx==0.28.1
+cryptography==44.0.0
+python-multipart==0.0.20
+slowapi==0.1.9
+
+# phase 2+ (installed now so the venv is stable)
+arq==0.26.3
+redis==5.2.1
+pdfplumber==0.11.5
+rapidfuzz==3.11.0
+google-generativeai==0.8.3
+
+# dev
+pytest==8.3.4
+pytest-asyncio==0.25.2
+asgi-lifespan==2.1.0
+itsdangerous
+pydantic[email]
+reportlab==4.2.5  # dev only: builds test fixtures
+segno==1.6.1  # QR for TOTP enrolment; pure python, no deps

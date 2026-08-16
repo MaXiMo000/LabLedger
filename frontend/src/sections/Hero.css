@@ -1,0 +1,265 @@
+.hero {
+  padding-block: clamp(var(--s7), 9vw, var(--s10)) var(--s9);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Asymmetric split: the argument gets the wider column, the demonstration
+   sits beside it rather than beneath a centred headline. */
+.hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(var(--s6), 6vw, var(--s9));
+  align-items: start;
+}
+
+.hero__lede { padding-top: var(--s2); }
+
+.hero__title {
+  font-size: var(--text-h1);
+  font-weight: 600;
+  margin-block: var(--s4) 0;
+  max-width: 15ch;
+}
+
+/* The second clause carries the point, so it gets the weight change rather
+   than a colour change. */
+.hero__title-em { color: var(--ink-muted); font-weight: 400; }
+
+.hero__sub {
+  margin-top: var(--s5);
+  font-size: var(--text-lead);
+  color: var(--ink-body);
+  max-width: 42ch;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-top: var(--s6);
+}
+
+/* ---- buttons ---------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0.625rem 1.125rem;
+  border-radius: var(--radius);
+  font-size: var(--text-small);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  transition: background var(--dur-1) var(--ease),
+              color var(--dur-1) var(--ease),
+              border-color var(--dur-1) var(--ease);
+}
+
+.btn--primary { background: var(--accent); color: #fff; }
+.btn--primary:hover { background: var(--accent-hover); }
+
+.btn--quiet {
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+.btn--quiet:hover { border-color: var(--ink-faint); }
+
+.btn__arrow {
+  font-size: 0.75em;
+  color: var(--ink-faint);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+.btn--quiet:hover .btn__arrow { transform: translateY(2px); }
+
+/* ---- the demonstration ------------------------------------------------ */
+
+.convergence {
+  margin: 0;
+  padding: var(--s5);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-1);
+}
+
+.convergence__cap { margin-bottom: var(--s3); }
+
+.convergence__in {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* A report row: label, printed string, value. Ruled, not carded. */
+.src {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "printed value" "lab value";
+  gap: 0 var(--s4);
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+}
+
+.src__lab {
+  grid-area: lab;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  letter-spacing: 0.01em;
+}
+
+.src__printed {
+  grid-area: printed;
+  font-size: var(--text-small);
+  color: var(--ink);
+}
+
+.src__val {
+  grid-area: value;
+  align-self: center;
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.src__unit { color: var(--ink-faint); }
+
+.converge {
+  height: 56px;
+  margin-block: var(--s2);
+}
+.converge svg { width: 100%; height: 100%; display: block; }
+
+/* ---- the resolved reading --------------------------------------------- */
+
+.resolved {
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule-strong);
+}
+
+.resolved__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+}
+
+.resolved__code {
+  font-size: var(--text-h3);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+/* Provenance sits with the code, always. A resolved value the user cannot
+   trace is not finished work. */
+.resolved__stage {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.resolved__name {
+  margin-top: var(--s1);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+}
+
+.resolved__reading {
+  display: grid;
+  grid-template-columns: auto auto minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s5);
+}
+
+.resolved__value {
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.resolved__unit { font-size: var(--text-small); color: var(--ink-faint); }
+
+/* Flags carry a word, never colour alone. */
+.flag {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.flag--low  { color: var(--flag-low);  background: var(--flag-low-wash); }
+.flag--high { color: var(--flag-high); background: var(--flag-high-wash); }
+
+.resolved__ref {
+  margin-top: var(--s3);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* ---- narrow -----------------------------------------------------------
+   Not a naive stack. Three things change rather than just reflowing:
+   the title measure widens (18ch) so it does not fragment into six short
+   lines, the lede drops from lead to body size, and the interval rail is
+   pulled onto its own row — at 375px it would otherwise be squeezed to
+   ~40px, too narrow for the tick position to mean anything. */
+
+@media (max-width: 900px) {
+  .hero { padding-block: var(--s7) var(--s8); }
+  .hero__grid { grid-template-columns: 1fr; gap: var(--s7); }
+  .hero__title { max-width: 18ch; }
+  .hero__sub { font-size: var(--text-body); }
+}
+
+@media (max-width: 560px) {
+  .convergence { padding: var(--s4); }
+  .converge { height: 40px; }
+  .resolved__reading {
+    grid-template-columns: auto auto 1fr;
+    row-gap: var(--s3);
+  }
+  /* The rail needs width to read; give it its own line rather than crushing it. */
+  .resolved__reading .rail { grid-column: 1 / -1; order: 4; }
+  .flag { justify-self: start; }
+  .src { grid-template-columns: 1fr auto; }
+}
+
+/* ---- entrance ----------------------------------------------------------
+   One sequence, driven by a per-element --d delay. `both` holds the start
+   state so nothing flashes at full opacity before its turn. The global
+   prefers-reduced-motion rule in tokens.css collapses all of it. */
+
+.rise {
+  animation: hero-rise var(--dur-3) var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.slide {
+  animation: hero-slide var(--dur-3) var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes hero-slide {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Drawing the merge: dash the stroke and pull the offset to zero. The value
+   comfortably exceeds the path length, so it works without measuring. */
+.converge__line {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: draw 500ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .converge__line { stroke-dashoffset: 0; }
+}

@@ -1,0 +1,342 @@
+/* LabLedger design system
+ *
+ * The artifact this interface descends from is a printed lab report: ruled
+ * rows, tabular figures, specimen headers, reference intervals, H/L flags.
+ * Every token below is chosen from that world rather than from dashboard
+ * convention.
+ *
+ * The accent is load-bearing for interaction only. Strip it and the page still
+ * reads correctly, because meaning is carried by position on the interval rail
+ * and by type hierarchy, never by colour alone.
+ */
+
+:root {
+  /* ---- surface: report stock ---------------------------------------- */
+  --paper:        #fafaf8;  /* warm off-white, the stock itself */
+  --paper-sunk:   #f2f2ee;  /* recessed wells, table zebra */
+  --paper-raised: #ffffff;  /* lifted sheets, popovers */
+
+  /* ---- ink ----------------------------------------------------------- */
+  --ink:          #111112;  /* headings, values */
+  --ink-body:     #33333a;  /* prose */
+  --ink-muted:    #6b6b73;  /* labels, captions */
+  --ink-faint:    #9a9aa1;  /* units, secondary metadata */
+
+  /* ---- rules --------------------------------------------------------- */
+  --rule:         #e4e3dd;  /* hairlines between rows */
+  --rule-strong:  #cfcec6;  /* section boundaries */
+
+  /* ---- accent: one flat institutional ink blue ----------------------- */
+  --accent:       #1b3a6b;
+  --accent-hover: #16305a;
+  --accent-wash:  #eef1f7;
+
+  /* ---- clinical flags: printed-ink tones, never neon ------------------ */
+  /* Deliberately desaturated so a flag reads as information, not alarm.
+     Never the sole signal: every flag ships with a glyph and a label,
+     because roughly 8% of men cannot separate these two hues. */
+  --flag-high:      #a8442c;
+  --flag-high-wash: #f7efec;
+  --flag-low:       #2c6577;
+  --flag-low-wash:  #eaf1f3;
+  --flag-normal:    #6b6b73;
+
+  /* ---- type ---------------------------------------------------------- */
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Mono is not a stylistic choice: lab values are columnar and demand
+     tabular figures. Proportional digits make a column unscannable. */
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-caption:  0.6875rem;  /* 11px — eyebrows, units */
+  --text-small:    0.8125rem;  /* 13px — table body, metadata */
+  --text-body:     0.9375rem;  /* 15px — prose */
+  --text-lead:     1.125rem;   /* 18px — intro paragraphs */
+  --text-h3:       1.375rem;
+  --text-h2:       2rem;
+  --text-h1:       clamp(2.5rem, 6vw, 4.25rem);
+
+  --tracking-eyebrow: 0.09em;
+  --tracking-tight:  -0.022em;   /* display sizes only */
+  --leading-tight:   1.08;
+  --leading-body:    1.6;
+
+  /* Prose never exceeds this: ~68 characters is the comfortable measure. */
+  --measure: 34rem;
+
+  /* ---- space: 4px base ----------------------------------------------- */
+  --s1: 0.25rem;  --s2: 0.5rem;   --s3: 0.75rem;  --s4: 1rem;
+  --s5: 1.5rem;   --s6: 2rem;     --s7: 3rem;     --s8: 4rem;
+  --s9: 6rem;     --s10: 8rem;
+
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+  --page-max: 76rem;
+
+  /* ---- form ----------------------------------------------------------- */
+  /* Near-square. A lab report has no rounded corners; a little softening
+     keeps it from feeling brutal without turning it into a card deck. */
+  --radius:    3px;
+  --radius-lg: 5px;
+
+  /* Shadows imitate paper lift, not glow. */
+  --lift-1: 0 1px 2px rgb(17 17 18 / 0.05);
+  --lift-2: 0 2px 4px rgb(17 17 18 / 0.05), 0 8px 24px rgb(17 17 18 / 0.06);
+
+  /* ---- motion --------------------------------------------------------- */
+  /* One curve for entrances, one for exits. Durations stay under 400ms:
+     this is an instrument, and instruments respond immediately. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 380ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- reset ----------------------------------------------------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-feature-settings: "cv05" 1;  /* single-storey 'l', clearer at small sizes */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  color: var(--ink);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+p { margin: 0; max-width: var(--measure); text-wrap: pretty; }
+
+a { color: inherit; text-decoration: none; }
+
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; }
+
+/* Every interactive element keeps a visible, high-contrast focus ring. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---- scrollbars --------------------------------------------------------
+   A default scrollbar is drawn by the operating system and arrives in the
+   wrong palette — a blue-grey Aqua bar down the edge of a warm paper sheet.
+   Styled to the same rule colours as everything else, and kept thin, because
+   a scrollbar is an indicator here, not a control anyone drags.
+
+   Both syntaxes, and the order of precedence is not obvious: where a browser
+   supports `scrollbar-width`/`scrollbar-color` (Firefox, Chrome 121+) those
+   win and the `::-webkit-scrollbar` block is ignored entirely. The webkit
+   rules are still load-bearing in Safari, which supports no standard
+   property. Neither is redundant; don't delete one for looking unused.
+
+   `scrollbar-gutter: stable` reserves the track so content does not shift
+   sideways when a list grows past its box. */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 99px;
+  /* Transparent border + background-clip is the only way to inset a webkit
+     thumb; there is no padding on the pseudo-element. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Any box that scrolls its own content. */
+.scroller {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;  /* stop at the ends, never scroll the page */
+}
+
+/* Numbers are tabular everywhere they appear. Non-negotiable. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 1;  /* slashed zero: 0 vs O at a glance */
+}
+
+/* ---- shared primitives ----------------------------------------------- */
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.page {
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Full-screen status while the session is restored. */
+.boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- route transitions ------------------------------------------------
+   One short fade on arrival. Screens in an instrument should appear, not
+   perform: no slide, no scale, nothing that delays reading the numbers. */
+
+/* `backwards`, never `both`. With `both` the animation stays in its fill phase
+   for the life of the element, and an element filling a transform animation
+   keeps a stacking context — so every section on a screen became one, and a
+   popover inside an earlier section was painted over by the next section no
+   matter what z-index it asked for. It reads exactly like a transparent menu.
+   `backwards` applies the `from` state before the animation starts and nothing
+   after it ends, which looks identical and leaves no stacking context behind.
+   The `to` state is the natural state, so there is nothing to hold. */
+.shell__main > *,
+.signin__panel {
+  animation: rise var(--dur-3) var(--ease-out) backwards;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Holds the viewport steady while a route chunk arrives. */
+.route-pending { min-height: 60vh; }
+
+.boot {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- screen furniture ---------------------------------------------------
+   Every app screen opens the same way: an eyebrow naming the section, a title
+   that states a count rather than repeating the nav label, and a tally of
+   readings on the right. Lives here rather than in a route stylesheet because
+   four routes depend on it. */
+
+.screen__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s6);
+  padding-bottom: var(--s5);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.screen__title { font-size: var(--text-h2); margin-top: var(--s2); }
+
+.tally { display: flex; gap: var(--s6); margin: 0; }
+.tally dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.tally dd { margin: var(--s1) 0 0; font-size: var(--text-h3); color: var(--ink); }
+/* A reading that is outside what this account should be sitting at. The same
+   tone the clinical flags use, for the same reason: something a person should
+   look at, stated without alarm. */
+.tally dd.tally--flag { color: var(--flag-high); }
+
+.muted { color: var(--ink-muted); font-size: var(--text-small); padding-block: var(--s5); }
+
+.empty { padding-block: var(--s9); max-width: 40ch; }
+.empty__title { font-size: var(--text-h3); }
+.empty__body { margin-block: var(--s3) var(--s5); color: var(--ink-muted); }
+
+/* 760px, not 640: the title states a count and the tally sits beside it, and
+   the two collide well before the phone breakpoint. */
+@media (max-width: 760px) {
+  .screen__head { flex-direction: column; align-items: flex-start; gap: var(--s4); }
+  .tally { gap: var(--s5); }
+}
+
+/* ---- form primitives ---------------------------------------------------
+   Shared by every form so fields cannot drift apart screen to screen. */
+
+.field { display: grid; gap: var(--s2); }
+
+.field__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.field__input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: var(--text-small);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.field__input::placeholder { color: var(--ink-faint); }
+.field__input:hover { border-color: var(--ink-faint); }
+.field__input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+.field__hint  { font-size: var(--text-caption); color: var(--ink-faint); }
+.field__error { font-size: var(--text-small); color: var(--flag-high); }
+
+.stack  { display: grid; gap: var(--s4); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+@media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } }

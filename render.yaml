@@ -1,0 +1,151 @@
+# Render blueprint — the whole system in one file.
+#
+# New > Blueprint > point at this repo. Render creates four services and asks
+# once for the secrets marked `sync: false`; everything else is wired here.
+#
+# The one thing that is not a preference: **the frontend proxies /api to the
+# backend rather than calling it cross-origin.** The refresh cookie is
+# httpOnly + SameSite=lax and scoped to /api/auth, which a browser will not
+# send to a different site — so a static site talking to `labledger-api...`
+# directly would authenticate on first load and silently fail every refresh
+# afterwards. The rewrite below keeps the browser on one origin, exactly as the
+# Vite dev proxy does locally. Change it to a cross-origin call and the session
+# model has to change with it (SameSite=none, Secure, CORS credentials).
+
+services:
+  # ---- API ------------------------------------------------------------------
+  - type: web
+    name: labledger-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.2"
+      - key: ENV
+        # Turns on Secure cookies and HSTS. Render terminates TLS, so this is
+        # correct here and wrong on localhost.
+        value: production
+      - key: BACKEND_URL
+        fromService: { type: web, name: labledger-api, property: host }
+      - key: FRONTEND_URL
+        fromService: { type: web, name: labledger-web, property: host }
+      - key: REDIS_URL
+        fromService: { type: redis, name: labledger-redis, property: connectionString }
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: labledger
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        # NOT generated: it must be exactly 32 bytes base64, and anything
+        # already encrypted is unreadable without the same value. Paste the one
+        # from your .env or the data does not come back.
+        sync: false
+      - key: JWT_ACCESS_TTL_MIN
+        value: "15"
+      - key: JWT_REFRESH_TTL_DAYS
+        value: "14"
+      - key: SESSION_IDLE_TIMEOUT_MIN
+        value: "30"
+      - key: MFA_GRACE_DAYS
+        value: "7"
+      - key: PASSWORD_RESET_TTL_MIN
+        value: "30"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: LLM_CONFIDENCE_FLOOR
+        value: "0.80"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        # Must match a redirect URI registered in Google Cloud Console exactly.
+        sync: false
+      - key: EMAILJS_SERVICE_ID
+        sync: false
+      - key: EMAILJS_PUBLIC_KEY
+        sync: false
+      - key: EMAILJS_PRIVATE_KEY
+        sync: false
+      - key: EMAILJS_TEMPLATE_RESET
+        sync: false
+      - key: EMAILJS_TEMPLATE_INVITE
+        sync: false
+      - key: ARQ_QUEUE_NAME
+        value: labledger:jobs
+      - key: LOG_LEVEL
+        value: info
+
+  # ---- worker ---------------------------------------------------------------
+  # Extraction and mapping run here, not in the request. Uploads are stored by
+  # the API and processed out of band, so the API stays up without this — the
+  # symptom of a stopped worker is documents stuck in `extracting`, not errors.
+  - type: worker
+    name: labledger-worker
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: arq app.worker.WorkerSettings
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.2"
+      - key: ENV
+        value: production
+      - key: REDIS_URL
+        fromService: { type: redis, name: labledger-redis, property: connectionString }
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: labledger
+      - key: JWT_SECRET
+        fromService: { type: web, name: labledger-api, envVarKey: JWT_SECRET }
+      - key: FIELD_ENCRYPTION_KEY
+        # The worker decrypts PDFs to extract them, so this must be the *same*
+        # value as the API's. A mismatch surfaces as every document failing.
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: LLM_CONFIDENCE_FLOOR
+        value: "0.80"
+      - key: ARQ_QUEUE_NAME
+        value: labledger:jobs
+      - key: BACKEND_URL
+        fromService: { type: web, name: labledger-api, property: host }
+      - key: FRONTEND_URL
+        fromService: { type: web, name: labledger-web, property: host }
+      - key: LOG_LEVEL
+        value: info
+
+  # ---- frontend -------------------------------------------------------------
+  - type: web
+    name: labledger-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      # Order matters. The API rewrite must be matched before the SPA fallback,
+      # or every request would be answered with index.html.
+      - type: rewrite
+        source: /api/*
+        destination: https://labledger-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # ---- queue ----------------------------------------------------------------
+  - type: redis
+    name: labledger-redis
+    plan: free
+    ipAllowList: []   # reachable only from inside Render

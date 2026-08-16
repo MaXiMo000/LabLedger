@@ -1,0 +1,60 @@
+.review__lede { color: var(--ink-body); max-width: 58ch; margin-bottom: var(--s6); }
+
+.ritems { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s5); }
+
+.ritem {
+  padding: var(--s5);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+/* The printed line, verbatim and set apart: this is the evidence. */
+.ritem__printed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s4);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+.ritem__name  { font-size: var(--text-lead); color: var(--ink); }
+.ritem__value { font-size: var(--text-small); color: var(--ink-muted); }
+.ritem__meta  { font-size: var(--text-caption); color: var(--ink-faint); margin-left: auto; }
+
+.ritem__reason { margin-top: var(--s3); font-size: var(--text-small); color: var(--flag-high); }
+
+.ritem__search { display: block; margin-top: var(--s4); }
+
+.cands { list-style: none; margin: var(--s3) 0 0; padding: 0; display: grid; gap: 2px; }
+.cands__none { padding: var(--s3) 0; font-size: var(--text-small); }
+
+.cand {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s3);
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.cand:hover { background: var(--paper-sunk); }
+/* Selection is a border and ink weight, not a fill: several of these sit in a
+   row and a filled state would read as already-confirmed. */
+.cand--on { border-color: var(--accent); background: var(--accent-wash); }
+
+.cand__code { font-size: var(--text-small); color: var(--ink); }
+.cand__name { font-size: var(--text-small); color: var(--ink-body); }
+.cand__why  { font-size: var(--text-caption); color: var(--ink-faint); white-space: nowrap; }
+
+.ritem__actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }
+
+@media (max-width: 640px) {
+  .ritem { padding: var(--s4); }
+  .ritem__meta { margin-left: 0; width: 100%; }
+  .cand { grid-template-columns: 1fr; gap: 2px; }
+  .cand__why { white-space: normal; }
+}

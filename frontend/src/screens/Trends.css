@@ -1,0 +1,324 @@
+/* Screen furniture — `.screen__head`, `.tally`, `.muted`, `.empty` — moved to
+   tokens.css. Every app screen uses it, and a lazily-loaded route's stylesheet
+   is the wrong owner for something four routes depend on: it only worked here
+   because Results is the index route and therefore always loaded first. */
+
+/* ---- panel rows --------------------------------------------------------
+   Ruled rows, not cards. A card grid would give every analyte equal visual
+   weight; a table lets the value column line up so the eye can run down it. */
+
+.panels { list-style: none; margin: 0; padding: 0; }
+
+.panel { border-bottom: 1px solid var(--rule); }
+
+.panel__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(90px, 150px) 5.5rem 2.5rem;
+  align-items: center;
+  gap: var(--s4);
+  width: 100%;
+  padding-block: var(--s4);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+.panel__row:hover { background: var(--paper-sunk); }
+
+.panel__name {
+  font-size: var(--text-small);
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.panel__pending {
+  font-size: var(--text-caption);
+  color: var(--flag-high);
+  background: var(--flag-high-wash);
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+}
+
+.panel__value { font-size: var(--text-body); color: var(--ink); white-space: nowrap; }
+.unit { color: var(--ink-faint); font-size: var(--text-caption); }
+.panel__n { font-size: var(--text-caption); color: var(--ink-faint); text-align: right; }
+
+.flag--normal  { color: var(--ink-muted); background: var(--paper-sunk); }
+.flag--unknown { color: var(--ink-faint); background: var(--paper-sunk); }
+
+/* ---- expanded series ---------------------------------------------------- */
+
+.series { padding: var(--s2) 0 var(--s6); }
+
+.chart { width: 100%; height: auto; display: block; margin-bottom: var(--s5); }
+.chart__band { fill: color-mix(in srgb, var(--ink) 7%, transparent); }
+.chart__grid { stroke: var(--rule); stroke-width: 1; }
+.chart__tick { font-size: 10px; fill: var(--ink-faint); }
+.chart__line { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; }
+.chart__pt { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.chart__pt--high { stroke: var(--flag-high); fill: var(--flag-high); }
+.chart__pt--low  { stroke: var(--flag-low);  fill: var(--flag-low); }
+/* A censored value is a bound, so it stays hollow and wears a bar. */
+.chart__pt--censored { fill: var(--paper); }
+.chart__censor { stroke: var(--ink); stroke-width: 1.5; }
+
+.readings { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+.readings th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-block: var(--s2);
+  border-bottom: 1px solid var(--rule);
+}
+.readings td { padding-block: var(--s3); border-bottom: 1px solid var(--rule); }
+.readings .muted { padding: 0; font-size: var(--text-small); }
+
+.excluded { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px dashed var(--rule-strong); }
+.excluded ul { list-style: none; margin: var(--s3) 0 0; padding: 0; }
+.excluded li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  padding-block: var(--s2);
+  font-size: var(--text-small);
+}
+.excluded__why { color: var(--ink-muted); }
+
+/* ---- narrow ------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  /* The rail is the first thing to go: below ~120px the tick position stops
+     meaning anything, and a misleading rail is worse than none. */
+  .panel__row {
+    grid-template-columns: minmax(0, 1fr) auto 4.5rem;
+    row-gap: var(--s2);
+  }
+  .panel__row .rail { display: none; }
+  .panel__n { display: none; }
+
+  .readings thead { display: none; }
+  .readings tr { display: grid; grid-template-columns: 1fr 1fr; padding-block: var(--s3); border-bottom: 1px solid var(--rule); }
+  .readings td { border: 0; padding-block: 1px; }
+}
+
+/* The way into a result's provenance. Underlined on hover rather than styled
+   as a button: it sits inside a table and should read as a reference. */
+.trace {
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.trace:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---- insights: statements about these numbers -------------------------- */
+
+.insights { list-style: none; margin: var(--s5) 0 0; padding: 0; display: grid; gap: 1px; }
+
+.insight {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--s3);
+  padding-block: var(--s2);
+  border-top: 1px solid var(--rule);
+  align-items: baseline;
+}
+.insight__kind { font-size: var(--text-caption); color: var(--ink-faint); }
+.insight__text { font-size: var(--text-small); color: var(--ink-body); }
+.insight--attention .insight__text { color: var(--ink); }
+.insight--attention .insight__kind { color: var(--flag-high); }
+
+/* ---- reference: background, not a finding ------------------------------
+   Visually separated from everything above it — recessed, collapsed by
+   default, and captioned as general. It must never read as a statement
+   about the person whose chart it sits under. */
+
+.ref {
+  margin-top: var(--s5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-sunk);
+}
+
+.ref__summary {
+  padding: var(--s3) var(--s4);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  cursor: pointer;
+  list-style: none;
+}
+.ref__summary::-webkit-details-marker { display: none; }
+.ref__summary::before { content: "+ "; color: var(--ink-faint); }
+.ref[open] .ref__summary::before { content: "− "; }
+.ref__summary:hover { color: var(--ink); }
+
+.ref__body { padding: 0 var(--s4) var(--s4); }
+.ref__measures { font-size: var(--text-small); color: var(--ink-body); max-width: 62ch; }
+
+.ref__dirs { margin: var(--s4) 0 0; display: grid; gap: var(--s3); }
+.ref__dirs > div { display: grid; grid-template-columns: 4rem minmax(0, 1fr); gap: var(--s3); }
+.ref__dirs dt { justify-self: start; }
+.ref__dirs dd { margin: 0; font-size: var(--text-small); color: var(--ink-body); max-width: 60ch; }
+
+/* The caveat is not fine print: it is the reason the panel is allowed to
+   exist, so it gets a rule above it and normal body contrast. */
+.ref__note {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule-strong);
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  max-width: 66ch;
+}
+
+.ref__link {
+  display: inline-block;
+  margin-top: var(--s3);
+  font-size: var(--text-caption);
+  color: var(--accent);
+  border-bottom: 1px solid transparent;
+}
+.ref__link:hover { border-bottom-color: var(--accent); }
+
+/* A header row: the trailing count was previously an unlabelled number, which
+   reads as noise. The grid deliberately matches .panel__row exactly. */
+.panels__head {
+  display: grid;
+  /* Must track .panel__row exactly, or the labels drift off their columns. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(90px, 150px) 5.5rem 2.5rem;
+  gap: var(--s4);
+  align-items: baseline;
+  padding-block: var(--s2);
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.panels__head-val { text-align: right; }
+.panels__head-n { text-align: right; }
+
+/* The row reflows to three columns below 720px, so the five-column header
+   would be lying. Hidden there; the screen-reader label on each count stays. */
+@media (max-width: 720px) {
+  .panels__head { display: none; }
+}
+
+/* ---- critical values ----------------------------------------------------
+   A different kind of statement from "high", so it does not borrow the flag
+   column's quiet tone. Still ink on paper rather than an alarm: the number and
+   its threshold are the message, and the threshold is on the title so the
+   basis can be checked rather than taken on trust. */
+
+.flag--critical {
+  color: var(--paper-raised);
+  background: var(--flag-high);
+  border-radius: var(--radius);
+  padding: 1px var(--s2);
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.critical {
+  margin-left: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--paper-raised);
+  background: var(--flag-high);
+  padding: 1px var(--s2);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+/* A change from the patient's own previous result. Muted: it is context for
+   the number beside it, not a finding competing with it. */
+.delta {
+  margin-left: var(--s2);
+  font-size: var(--text-caption);
+  color: var(--flag-low);
+  background: var(--flag-low-wash);
+  padding: 1px var(--s2);
+  border-radius: var(--radius);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* ---- calculated values --------------------------------------------------
+   Its own section, below the measured results and visually quieter than them.
+   A calculated number and a measured one are different kinds of claim, and
+   folding them into one list would hide which is which. */
+
+.calc { margin-top: var(--s7); padding-top: var(--s5); border-top: 1px solid var(--rule-strong); }
+
+.calc__h { font-size: var(--text-h3); font-weight: 500; }
+.calc__note {
+  margin-top: var(--s2);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 62ch;
+}
+
+.calc__row { border-bottom: 1px solid var(--rule); }
+.calc__row:first-of-type { border-top: 1px solid var(--rule); margin-top: var(--s4); }
+
+.calc__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 5.5rem 4.5rem;
+  align-items: center;
+  gap: var(--s4);
+  padding-block: var(--s4);
+  cursor: pointer;
+  list-style: none;
+}
+.calc__summary::-webkit-details-marker { display: none; }
+.calc__summary:hover { background: var(--paper-sunk); }
+
+.calc__name  { font-size: var(--text-small); color: var(--ink); }
+.calc__name::before { content: "+ "; color: var(--ink-faint); }
+.calc__row[open] .calc__name::before { content: "− "; }
+.calc__value { font-size: var(--text-body); color: var(--ink); white-space: nowrap; }
+.calc__n     { font-size: var(--text-caption); color: var(--ink-faint); text-align: right; }
+
+.calc__body { padding-bottom: var(--s5); }
+
+/* The formula is the point of the section: it is what makes the number
+   checkable rather than something to be taken on trust. */
+.calc__formula {
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  background: var(--paper-sunk);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius);
+  display: inline-block;
+  margin-bottom: var(--s3);
+}
+
+.calc__caveat {
+  margin-top: var(--s3);
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  max-width: 66ch;
+}
+
+.calc__missing {
+  margin-top: var(--s4);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  border-left: 2px solid var(--rule-strong);
+  padding-left: var(--s3);
+}
+
+@media (max-width: 760px) {
+  .calc__summary { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--s1); }
+  .calc__n { display: none; }
+}

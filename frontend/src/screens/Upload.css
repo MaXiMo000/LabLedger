@@ -1,0 +1,59 @@
+.upload__lede { color: var(--ink-body); margin-bottom: var(--s6); max-width: 54ch; }
+
+/* The drop target is a well, not a card: it reads as somewhere to put
+   something rather than something to look at. */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: var(--s8) var(--s5);
+  background: var(--paper-sunk);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
+}
+.drop:hover, .drop--over { border-color: var(--accent); background: var(--accent-wash); }
+.drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.drop__title { font-size: var(--text-body); font-weight: 500; color: var(--ink); }
+.drop__meta  { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.uploads { list-style: none; margin: var(--s6) 0 0; padding: 0; border-top: 1px solid var(--rule); }
+
+.up {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas: "name rows status" "error error error";
+  gap: var(--s1) var(--s4);
+  align-items: baseline;
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+.up__name   { grid-area: name; font-size: var(--text-small); color: var(--ink); }
+.up__rows   { grid-area: rows; font-size: var(--text-caption); color: var(--ink-faint); }
+.up__status { grid-area: status; font-size: var(--text-caption); color: var(--ink-muted); }
+.up__error  { grid-area: error; font-size: var(--text-caption); color: var(--flag-high); }
+
+.up--done .up__status,
+.up--needs_review .up__status { color: var(--accent); }
+.up--failed .up__status { color: var(--flag-high); }
+
+.upload__next { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s6); }
+
+@media (max-width: 560px) {
+  .drop { padding: var(--s6) var(--s4); }
+  .up { grid-template-columns: 1fr auto; grid-template-areas: "name status" "rows rows" "error error"; }
+}
+
+.upload__none {
+  margin-top: var(--s5);
+  padding: var(--s4);
+  background: var(--flag-high-wash);
+  border-radius: var(--radius);
+  font-size: var(--text-small);
+  color: var(--flag-high);
+  max-width: 56ch;
+}

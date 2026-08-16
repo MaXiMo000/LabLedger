@@ -1,0 +1,73 @@
+.psw { position: relative; }
+
+/* The active record sits at the same weight as the product mark: on a screen
+   full of numbers, whose numbers they are is the most important word. */
+.psw__current {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.psw__current:hover { border-color: var(--ink-faint); }
+
+.psw__label { color: var(--ink-faint); }
+.psw__name  { font-size: var(--text-small); font-weight: 500; color: var(--ink); }
+.psw__caret { font-size: 0.6rem; color: var(--ink-faint); }
+
+.psw__menu {
+  position: absolute;
+  top: calc(100% + var(--s2));
+  left: 0;
+  min-width: 20rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-2);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.psw__list { list-style: none; margin: 0; padding: 0; }
+
+.psw__item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: var(--s3) var(--s4);
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--dur-1) var(--ease);
+}
+.psw__item:hover { background: var(--paper-sunk); }
+.psw__item--on { background: var(--accent-wash); }
+
+.psw__item-name { font-size: var(--text-small); color: var(--ink); }
+.psw__item-meta { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.psw__new {
+  display: block;
+  width: 100%;
+  padding: var(--s3) var(--s4);
+  text-align: left;
+  font-size: var(--text-small);
+  color: var(--accent);
+  cursor: pointer;
+}
+.psw__new:hover { background: var(--paper-sunk); }
+
+.psw__add { padding: var(--s4); display: grid; gap: var(--s3); }
+.psw__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+.psw__why { font-size: var(--text-caption); color: var(--ink-faint); }
+.psw__actions { display: flex; gap: var(--s2); }
+
+@media (max-width: 640px) {
+  .psw__menu { left: auto; right: 0; min-width: 17rem; }
+  .psw__row { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,53 @@
+.reports { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+
+.report {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr) 6rem 8rem auto;
+  gap: var(--s4);
+  align-items: baseline;
+  padding-block: var(--s4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.report__when { display: flex; flex-direction: column; gap: 1px; }
+.report__date { font-size: var(--text-small); color: var(--ink); }
+.report__src  { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.report__what { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.report__lab  { font-size: var(--text-small); color: var(--ink); }
+.report__file {
+  font-size: var(--text-caption); color: var(--ink-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.report__error { font-size: var(--text-caption); color: var(--flag-high); }
+
+.report__rows   { font-size: var(--text-small); color: var(--ink-muted); }
+.report__status { font-size: var(--text-caption); color: var(--ink-muted); }
+.report__status--needs_review { color: var(--flag-high); }
+.report__status--failed { color: var(--flag-high); }
+.report__status--done { color: var(--accent); }
+
+.report__actions { display: flex; gap: var(--s3); }
+
+.report__link {
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.report__link:hover { color: var(--ink); border-bottom-color: var(--rule-strong); }
+.report__link--danger:hover { color: var(--flag-high); border-bottom-color: var(--flag-high); }
+
+@media (max-width: 860px) {
+  .report {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "what status" "when rows" "actions actions";
+    gap: var(--s2) var(--s4);
+  }
+  .report__when { grid-area: when; }
+  .report__what { grid-area: what; }
+  .report__rows { grid-area: rows; justify-self: end; }
+  .report__status { grid-area: status; }
+  .report__actions { grid-area: actions; margin-top: var(--s2); }
+}

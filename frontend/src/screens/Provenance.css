@@ -1,0 +1,222 @@
+/* A side sheet rather than a centred modal: the chart stays visible behind it,
+   so the number and its explanation can be read together. */
+
+.prov__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgb(17 17 18 / 0.28);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: prov-fade var(--dur-2) var(--ease);
+}
+
+.prov {
+  width: min(46rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--paper-raised);
+  border-left: 1px solid var(--rule-strong);
+  animation: prov-in var(--dur-3) var(--ease-out);
+}
+
+@keyframes prov-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes prov-in   { from { transform: translateX(16px) } to { transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prov__scrim, .prov { animation: none; }
+}
+
+.prov__head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s5) var(--s6);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
+  z-index: 1;
+}
+
+.prov__close {
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.prov__close:hover { color: var(--ink); border-bottom-color: var(--rule-strong); }
+
+.prov__pad { padding: var(--s6); }
+
+/* ---- the evidence ------------------------------------------------------ */
+
+.printed {
+  margin: 0;
+  padding: var(--s5) var(--s6);
+  background: var(--paper-sunk);
+  border-bottom: 1px solid var(--rule);
+}
+
+.printed__cap { margin-bottom: var(--s3); }
+
+/* Set as a monospaced row with the columns a report would use, so it reads as
+   a line lifted off the page rather than reformatted data. */
+.printed__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 1.5rem auto;
+  gap: var(--s3);
+  align-items: baseline;
+  font-size: var(--text-body);
+  color: var(--ink);
+  padding-block: var(--s2);
+  border-block: 1px solid var(--rule-strong);
+}
+.printed__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.printed__val  { font-weight: 500; }
+.printed__unit,
+.printed__ref  { color: var(--ink-faint); font-size: var(--text-small); }
+.printed__flag { color: var(--flag-high); font-size: var(--text-small); }
+
+.printed__meta { margin-top: var(--s2); font-size: var(--text-caption); color: var(--ink-faint); }
+
+/* ---- the chain --------------------------------------------------------- */
+
+.steps { list-style: none; margin: 0; padding: 0; }
+
+.step {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  padding: var(--s5) var(--s6);
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+
+/* A hairline connecting the numbers: the steps are a sequence, and the rule
+   says so without adding an icon. */
+.step::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--s6) + 0.62rem);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+.step:first-child::before { top: var(--s5); }
+.step:last-child::before  { bottom: calc(100% - var(--s5)); }
+
+.step__n {
+  position: relative;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  background: var(--paper-raised);
+  padding-block: 2px;
+  align-self: start;
+  z-index: 1;
+}
+
+.step--muted .step__n { color: var(--rule-strong); }
+
+.step__label {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.step--muted .step__label { color: var(--ink-muted); }
+
+.step__text {
+  margin-top: var(--s2);
+  font-size: var(--text-small);
+  color: var(--ink-body);
+  max-width: 56ch;
+}
+
+/* ---- resolved code ----------------------------------------------------- */
+
+.resolved-to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  padding: var(--s3);
+  background: var(--accent-wash);
+  border-radius: var(--radius);
+}
+.resolved-to__code {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--accent);
+}
+.resolved-to__name { font-size: var(--text-small); color: var(--ink-body); }
+
+/* ---- fact list --------------------------------------------------------- */
+
+.facts { margin: var(--s4) 0 0; display: grid; gap: 1px; }
+
+.fact {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: var(--s3);
+  padding-block: var(--s2);
+  border-top: 1px solid var(--rule);
+}
+.fact dt { font-size: var(--text-caption); color: var(--ink-faint); }
+.fact dd { margin: 0; font-size: var(--text-small); color: var(--ink-body); }
+
+/* ---- conversion -------------------------------------------------------- */
+
+.conv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+}
+.conv__arrow { color: var(--ink-faint); }
+.conv__out   { color: var(--ink); font-weight: 500; }
+
+/* ---- judgement --------------------------------------------------------- */
+
+.judge { margin-top: var(--s4); }
+
+.judge__legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-top: var(--s2);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* ---- foot -------------------------------------------------------------- */
+
+.prov__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s5) var(--s6);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+.prov__status { color: var(--ink-muted); }
+.prov__file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .prov { width: 100%; border-left: none; }
+  .prov__head, .printed, .step, .prov__foot { padding-inline: var(--s4); }
+  .step { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .step::before { left: calc(var(--s4) + 0.62rem); }
+  .fact { grid-template-columns: 1fr; gap: 0; }
+  /* The printed line wraps rather than truncating: on a phone the evidence is
+     still the point of the screen. */
+  .printed__line { grid-template-columns: 1fr auto; row-gap: var(--s1); }
+  .printed__name { grid-column: 1 / -1; white-space: normal; }
+}

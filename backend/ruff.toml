@@ -1,0 +1,47 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "SIM", "UP", "RUF", "DTZ", "BLE", "FURB", "ASYNC", "D", "N", "C4", "PTH", "T20", "ARG", "PIE"]
+
+ignore = [
+    # FastAPI's dependency injection *is* a call in a default argument
+    # (`user: User = Depends(current_user)`). Flagging it would mean flagging
+    # every route in the app.
+    "B008",
+    "E501",   # line length is handled by the formatter
+    # Docstring rules we deliberately do not enforce: a docstring on every
+    # dunder, magic method, or one-line Pydantic model is noise, not documentation.
+    "D100",   # module docstring: required on pipeline/, optional elsewhere
+    "D104",   # package __init__
+    "D105", "D107",
+    # Beanie/arq nested `class Settings:` blocks are declarative config, not API.
+    "D106",
+    "D203",   # incompatible with D211
+    "D213",   # incompatible with D212
+
+]
+
+[lint.per-file-ignores]
+# Scripts prepend the project root to sys.path before importing app.*, so the
+# imports genuinely cannot sit at the top of the file. They are one-off
+# developer tools, not request-path code: blocking IO and broad excepts are fine.
+"scripts/*" = ["E402", "ASYNC240", "BLE001"]
+# Lab PDFs really do print reference ranges with en/em dashes ("24–336") and
+# non-breaking spaces inside units. Matching those "ambiguous" characters is
+# the whole point of these regexes.
+"app/pipeline/extract.py" = ["RUF001"]
+"app/pipeline/ranges.py" = ["RUF001"]
+"app/pipeline/units.py" = ["RUF001"]
+# Tests deliberately assert on private helpers and use bare asserts.
+"tests/*" = ["S101", "SLF001", "D", "ARG"]
+"scripts/bench_*.py" = ["T20"]
+"scripts/make_sample_reports.py" = ["RUF001"]
+"scripts/*.py" = ["T20", "D"]
+"tests/fixtures/*" = ["T20", "D"]
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.isort]
+known-first-party = ["app"]

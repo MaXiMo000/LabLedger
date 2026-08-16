@@ -1,0 +1,241 @@
+/* Three sections answering one question in sequence: whose data, who may see
+   it, who did. Ruled blocks rather than cards — the shift between them is a
+   heading and a rule, not a container. */
+
+.rec__block {
+  padding-block: var(--s6);
+  border-top: 1px solid var(--rule);
+}
+.rec__block:first-of-type { border-top: none; padding-top: var(--s4); }
+
+.rec__h {
+  font-size: var(--text-h3);
+  font-weight: 500;
+  margin-bottom: var(--s4);
+}
+
+/* A heading with something on its right — the edit affordance, the entry
+   count. Baseline-aligned so the small text sits on the heading's line. */
+.rec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+}
+.rec__count { font-size: var(--text-caption); color: var(--ink-faint); }
+
+/* Quiet until wanted: editing demographics is occasional, and a filled button
+   beside the heading would compete with the record's own name. */
+.rec__edit {
+  font-size: var(--text-small);
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.rec__edit:hover { border-bottom-color: var(--accent); }
+
+.rec__form {
+  display: grid;
+  gap: var(--s4);
+  max-width: 40rem;
+}
+
+.rec__actions { display: flex; gap: var(--s2); align-items: center; }
+
+/* The next step after a grant that could not be made. Sunk rather than ruled,
+   so it reads as a consequence of the form above it and not as a new section. */
+.rec__offer {
+  display: grid;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  padding: var(--s4);
+  max-width: 52rem;
+  background: var(--paper-sunk);
+  border-radius: var(--radius);
+}
+.rec__offer p { font-size: var(--text-small); color: var(--ink-body); }
+.rec__offer--link { background: var(--accent-wash); }
+.rec__offer .rec__sub { margin-top: 0; }
+
+.rec__linkrow { display: flex; gap: var(--s2); align-items: center; }
+/* The link is long and never typed, only copied — let it fill the row and
+   show its end rather than wrapping to three lines. */
+.rec__linkrow .field__input { flex: 1; font-size: var(--text-caption); }
+
+@media (max-width: 640px) {
+  .rec__linkrow { flex-direction: column; align-items: stretch; }
+}
+
+.rec__sub {
+  font-size: var(--text-small);
+  font-weight: 500;
+  color: var(--ink-muted);
+  margin-top: var(--s6);
+  margin-bottom: var(--s3);
+}
+
+.rec__hint {
+  margin-top: var(--s3);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 62ch;
+}
+
+.rec__role { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.rec__locked {
+  padding: var(--s5);
+  background: var(--paper-sunk);
+  border-radius: var(--radius);
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 60ch;
+}
+
+/* ---- demographics ------------------------------------------------------ */
+
+.rec__facts { margin: 0; display: grid; gap: 1px; max-width: 40rem; }
+.rec__facts > div {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--s3);
+  padding-block: var(--s2);
+  border-top: 1px solid var(--rule);
+}
+.rec__facts dt { font-size: var(--text-caption); color: var(--ink-faint); }
+.rec__facts dd { margin: 0; font-size: var(--text-small); color: var(--ink); }
+
+/* ---- grants ------------------------------------------------------------ */
+
+.grants { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+
+.grant {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 7rem minmax(0, 1.4fr) auto;
+  gap: var(--s4);
+  align-items: baseline;
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+.grant__who  { font-size: var(--text-small); color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.grant__role { font-size: var(--text-small); color: var(--ink-body); }
+.grant__can  { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.grant__revoke {
+  font-size: var(--text-caption);
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.grant__revoke:hover { color: var(--flag-high); border-bottom-color: var(--flag-high); }
+
+.grants--past .grant { opacity: 0.65; }
+
+/* Three controls on a baseline, and anything explanatory on the row beneath.
+   `align-items: end` lines the inputs and the button up by their bottom edge,
+   which only holds while all three cells are the same height — so nothing that
+   grows a cell may live inside one. */
+.rec__grant {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) auto;
+  gap: var(--s3);
+  align-items: end;
+  margin-top: var(--s5);
+  max-width: 52rem;
+}
+
+.rec__granthint {
+  grid-column: 1 / -1;
+  margin-top: calc(var(--s3) * -1 + var(--s1));
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* ---- activity ---------------------------------------------------------- */
+
+/* Capped rather than endless. The height is ~10 rows: enough that the list
+   reads as a log rather than a preview, short enough that "who can reach it"
+   stays on the same screen. Bottom rule closes the box so a mid-scroll list
+   does not look like it was cut off by the viewport. */
+.trail {
+  list-style: none;
+  margin: var(--s4) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  max-height: 26rem;
+}
+/* Focusable for keyboard scrolling, but the ring belongs on the box, not
+   inset around the rows. */
+.trail:focus-visible { outline-offset: 0; }
+
+.trailrow {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1.1fr) minmax(0, 1.3fr) 8rem;
+  gap: var(--s4);
+  align-items: baseline;
+  padding-block: var(--s2);
+  border-bottom: 1px solid var(--rule);
+}
+.trailrow__at   { font-size: var(--text-caption); color: var(--ink-faint); }
+.trailrow__who  { font-size: var(--text-caption); color: var(--ink-body); overflow: hidden; text-overflow: ellipsis; }
+.trailrow__what { font-size: var(--text-small); color: var(--ink); }
+.trailrow__ip   { font-size: var(--text-caption); color: var(--ink-faint); }
+
+/* Taking a copy of a source PDF is the most sensitive action recorded, so it
+   is the one row that reads differently at a glance. */
+.trailrow--notable .trailrow__what { color: var(--flag-high); }
+
+@media (max-width: 860px) {
+  .grant { grid-template-columns: 1fr auto; grid-template-areas: "who revoke" "role role" "can can"; gap: var(--s1) var(--s3); }
+  .grant__who { grid-area: who; }
+  .grant__role { grid-area: role; }
+  .grant__can { grid-area: can; }
+  .grant__revoke { grid-area: revoke; }
+  .rec__grant { grid-template-columns: 1fr; }
+  /* Stacked, the hint follows the button in normal flow: the pull-up that
+     tightens it under a three-column row would crowd it here. */
+  .rec__granthint { margin-top: 0; }
+  .trailrow { grid-template-columns: 1fr auto; grid-template-areas: "what at" "who ip"; gap: var(--s1) var(--s3); }
+  .trailrow__at { grid-area: at; justify-self: end; }
+  .trailrow__who { grid-area: who; }
+  .trailrow__what { grid-area: what; }
+  .trailrow__ip { grid-area: ip; justify-self: end; }
+  .rec__facts > div { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* Which row is you. The access panel is the one place where "add a person"
+   and "change my own role" can be confused for each other, and they land on
+   the same grant. */
+.grant__you {
+  margin-left: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 1px var(--s2);
+  border-radius: var(--radius);
+}
+
+/* Handing the record on. Set apart from the grant form above it because it is
+   not another way to add somebody — it changes who is in charge. */
+.rec__handover {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-top: var(--s6);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+  max-width: 52rem;
+}
+.rec__handover .rec__sub { margin-top: 0; }
+.rec__handover .rec__hint { margin-top: var(--s1); }
+.rec__handover button { flex: none; }
+
+@media (max-width: 640px) {
+  .rec__handover { flex-direction: column; }
+}

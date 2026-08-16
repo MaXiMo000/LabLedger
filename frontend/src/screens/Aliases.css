@@ -1,0 +1,80 @@
+/* Ruled rows, like every other list here. The shape is deliberately a
+   sentence — printed name, arrow, what it means — because that is what a rule
+   of this kind is, and a table of columns would hide the claim being made. */
+
+.alias__note {
+  font-size: var(--text-small);
+  color: var(--ink-muted);
+  max-width: 62ch;
+  margin-block: var(--s4) var(--s5);
+}
+
+.aliases { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+
+.alias {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.5rem minmax(0, 1.6fr) 6rem auto;
+  gap: var(--s3);
+  align-items: baseline;
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.alias__printed { font-size: var(--text-small); color: var(--ink); }
+.alias__spec    { color: var(--ink-faint); font-size: var(--text-caption); }
+.alias__arrow   { color: var(--ink-faint); justify-self: center; }
+.alias__means   { font-size: var(--text-small); color: var(--ink-body); }
+.alias__code    { font-size: var(--text-caption); color: var(--ink-faint); }
+.alias__uses    { font-size: var(--text-caption); color: var(--ink-faint); }
+
+.alias__actions { display: flex; gap: var(--s3); justify-self: end; }
+
+.alias__fix, .alias__forget {
+  font-size: var(--text-caption);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.alias__fix { color: var(--accent); }
+.alias__fix:hover { border-bottom-color: var(--accent); }
+.alias__forget { color: var(--ink-muted); }
+.alias__forget:hover { color: var(--flag-high); border-bottom-color: var(--flag-high); }
+
+/* ---- the picker inside the dialog -------------------------------------- */
+
+.alias__hits {
+  list-style: none;
+  margin: var(--s4) 0 0;
+  padding: 0;
+  max-height: 18rem;
+  border-top: 1px solid var(--rule);
+}
+
+.alias__hit {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--dur-1) var(--ease);
+}
+.alias__hit:hover { background: var(--paper-sunk); }
+.alias__hit[disabled] { opacity: 0.5; cursor: default; }
+
+.alias__hit-name { font-size: var(--text-small); color: var(--ink); }
+.alias__hit-meta { font-size: var(--text-caption); color: var(--ink-faint); }
+
+@media (max-width: 760px) {
+  .alias {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "printed actions" "means means" "uses uses";
+    row-gap: var(--s1);
+  }
+  .alias__printed { grid-area: printed; }
+  .alias__means   { grid-area: means; }
+  .alias__uses    { grid-area: uses; }
+  .alias__actions { grid-area: actions; }
+  .alias__arrow   { display: none; }
+}
