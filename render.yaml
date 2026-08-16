@@ -14,6 +14,14 @@
 
 services:
   # ---- API ------------------------------------------------------------------
+  # An external pinger is what keeps this awake, because a Free web service
+  # spins down after 15 minutes idle and the in-process worker sleeps with it.
+  # Budget it before switching one on: a workspace gets **750 Free instance
+  # hours a month**, and hours are only consumed while a service is *running*.
+  # Kept awake continuously, a 31-day month is 744 of those 750 — enough for
+  # exactly one always-on Free web service, with nothing spare. Run a second
+  # and both are suspended part-way through the month. The static site does not
+  # consume instance hours, so this service is the only one that counts.
   - type: web
     name: labledger-api
     runtime: python
@@ -34,7 +42,7 @@ services:
       - key: FRONTEND_URL
         fromService: { type: web, name: labledger-web, property: host }
       - key: REDIS_URL
-        fromService: { type: redis, name: labledger-redis, property: connectionString }
+        fromService: { type: keyvalue, name: labledger-redis, property: connectionString }
       - key: MONGO_URI
         sync: false
       - key: MONGO_DB_NAME
@@ -81,51 +89,32 @@ services:
         sync: false
       - key: ARQ_QUEUE_NAME
         value: labledger:jobs
+      # Runs the arq worker inside this process, because Render has no Free
+      # instance type for a background worker. See the note below.
+      - key: RUN_WORKER_IN_API
+        value: "true"
       - key: LOG_LEVEL
         value: info
 
   # ---- worker ---------------------------------------------------------------
-  # Extraction and mapping run here, not in the request. Uploads are stored by
-  # the API and processed out of band, so the API stays up without this — the
-  # symptom of a stopped worker is documents stuck in `extracting`, not errors.
-  - type: worker
-    name: labledger-worker
-    runtime: python
-    plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: arq app.worker.WorkerSettings
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.2"
-      - key: ENV
-        value: production
-      - key: REDIS_URL
-        fromService: { type: redis, name: labledger-redis, property: connectionString }
-      - key: MONGO_URI
-        sync: false
-      - key: MONGO_DB_NAME
-        value: labledger
-      - key: JWT_SECRET
-        fromService: { type: web, name: labledger-api, envVarKey: JWT_SECRET }
-      - key: FIELD_ENCRYPTION_KEY
-        # The worker decrypts PDFs to extract them, so this must be the *same*
-        # value as the API's. A mismatch surfaces as every document failing.
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.5-flash
-      - key: LLM_CONFIDENCE_FLOOR
-        value: "0.80"
-      - key: ARQ_QUEUE_NAME
-        value: labledger:jobs
-      - key: BACKEND_URL
-        fromService: { type: web, name: labledger-api, property: host }
-      - key: FRONTEND_URL
-        fromService: { type: web, name: labledger-web, property: host }
-      - key: LOG_LEVEL
-        value: info
+  # There isn't one. Render has no Free instance type for `type: worker` — only
+  # web services, static sites, Postgres and Key Value can be Free — so the
+  # separate worker this project is designed around costs money to run.
+  #
+  # Instead the API sets RUN_WORKER_IN_API and runs arq inside its own process.
+  # This is a downgrade, stated plainly: extraction is CPU-bound and now shares
+  # an event loop with request handling, a free web service spins down after
+  # 15 minutes idle, and Render may restart it at any time — any of which kills
+  # a job mid-flight, leaving the document in `extracting` until it is
+  # reprocessed. Keeping the service awake needs an external pinger, and that
+  # burns Free instance hours (see the note on the API service above).
+  #
+  # To go back to the real shape, put the `type: worker` service back with
+  # `plan: starter`, drop RUN_WORKER_IN_API, and give it the same MONGO_URI,
+  # FIELD_ENCRYPTION_KEY, GEMINI_API_KEY, REDIS_URL and ARQ_QUEUE_NAME —
+  # pulling the secrets with `fromService`/`envVarKey` off labledger-api rather
+  # than pasting them twice, because a FIELD_ENCRYPTION_KEY that differs by one
+  # character fails every document and says nothing about why.
 
   # ---- frontend -------------------------------------------------------------
   - type: web
@@ -145,7 +134,12 @@ services:
         destination: /index.html
 
   # ---- queue ----------------------------------------------------------------
-  - type: redis
+  # `keyvalue` is the current type; `redis` is a deprecated alias for it.
+  # The free instance is in-memory only with no persistence, which for a job
+  # queue means anything still queued is lost if it restarts. Acceptable here
+  # because a dropped job leaves the document in `extracting` and it can be
+  # re-uploaded — not because the queue is durable.
+  - type: keyvalue
     name: labledger-redis
     plan: free
-    ipAllowList: []   # reachable only from inside Render
+    ipAllowList: []   # required on Key Value; empty means no external access

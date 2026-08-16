@@ -1,8 +1,10 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from arq import create_pool
 from arq.connections import RedisSettings
+from arq.worker import Worker
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -14,6 +16,7 @@ from app.audit import set_request_context
 from app.config import settings
 from app.db import close_db, init_db
 from app.routers import audit, auth, documents, observations, patients, review
+from app.worker import process_document
 
 logging.basicConfig(level=settings.log_level.upper())
 logger = logging.getLogger("labledger")
@@ -38,7 +41,33 @@ async def lifespan(app: FastAPI):
         app.state.arq = None
         logger.warning("arq unavailable (%s): uploads will queue without a worker",
                        type(exc).__name__)
+
+    worker, worker_task = None, None
+    if settings.run_worker_in_api:
+        # No on_startup/on_shutdown: this process already opened Mongo above
+        # and closes it below, and running the worker's own hooks would
+        # re-initialise Beanie underneath the live request handlers.
+        #
+        # handle_signals=False is not optional. arq installs SIGINT/SIGTERM
+        # handlers of its own by default, which would take the shutdown out of
+        # uvicorn's hands and leave requests in flight when the platform stops
+        # the service.
+        worker = Worker(
+            functions=[process_document],
+            redis_settings=RedisSettings.from_dsn(settings.redis_url),
+            queue_name=settings.arq_queue_name,
+            max_jobs=2,     # sharing an event loop with request handling
+            job_timeout=300,
+            handle_signals=False,
+        )
+        worker_task = asyncio.create_task(worker.async_run())
+        logger.info("arq worker running in-process queue=%s", settings.arq_queue_name)
+
     yield
+
+    if worker is not None:
+        await worker.close()
+        worker_task.cancel()
     if app.state.arq is not None:
         await app.state.arq.aclose()
     await close_db()

@@ -38,6 +38,13 @@ class Settings(BaseSettings):
 
     redis_url: str
     arq_queue_name: str = "labledger:jobs"
+    # Run the arq worker inside the API process instead of as its own service.
+    # Off by default, because a separate worker is the right shape: extraction
+    # is CPU-bound and competing with request handling for the event loop is a
+    # real cost. It exists because Render has no free instance type for a
+    # background worker, and one process on a free web service is the
+    # difference between uploads processing and not. See render.yaml.
+    run_worker_in_api: bool = False
 
     llm_confidence_floor: float = 0.80
     log_level: str = "info"
