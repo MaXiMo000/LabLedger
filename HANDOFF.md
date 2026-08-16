@@ -68,6 +68,26 @@ and 500s on everything after a model change. If logins fail inexplicably, check
 
 ---
 
+## Deployed
+
+| | |
+|---|---|
+| App | <https://labledger-web.onrender.com> |
+| API | <https://labledger-api.onrender.com> |
+
+Verified live: sign-in, patient decryption, panel grouping, derived values, and
+an upload processed end to end (`queued → mapping → needs_review`, 55s).
+
+**There is no worker service.** Render has no Free instance type for
+`type: worker`, so the API sets `RUN_WORKER_IN_API=true` and runs arq inside
+its own process. Free web services sleep after 15 minutes idle and the worker
+sleeps with them, so an external pinger against `/api/health` is what keeps
+uploads processing — at the cost of 744 of the 750 monthly Free instance hours,
+which is enough for exactly one always-on Free web service and no more.
+
+Untested in production: Google sign-in, and whether mail sent from Render
+composes links against the right `FRONTEND_URL`.
+
 ## Deploying to Render
 
 [render.yaml](render.yaml) is a blueprint: **New → Blueprint → this repo.** It
