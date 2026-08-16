@@ -494,7 +494,14 @@ structurally sound and in the right unit.
   the backlog drains. Per-account, because the per-IP limiter buckets by
   address and anything spread over a few hosts walks past it — the same
   argument `throttle.py` already makes about codes.
-- **Cap total stored bytes per account.** 25 MB per file, unlimited files.
+- ~~**Cap total stored bytes per account.**~~ Done — `MAX_ACCOUNT_BYTES`,
+  default 200 MB. 25 MB a file with no ceiling on the count let one account
+  fill Mongo, and a full cluster on the free Atlas tier does not degrade: it
+  **blocks writes for everything on it**, which this project has already done
+  to itself once running the suite in parallel. Bounds one actor, not the
+  cluster — ten accounts at the cap still fill a small tier, and the real
+  protection is the storage a deployment pays for. 507, not 413: the payload
+  may be small, what is full is the account.
 - **A retention policy that does something.** Documents are kept forever;
   `ARCHITECTURE.md` lists retention as out of scope, which is honest but is also
   the thing an assessor asks about first.

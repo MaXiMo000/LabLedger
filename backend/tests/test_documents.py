@@ -237,3 +237,59 @@ async def test_reprocess_is_bounded_too(client, account):
 
     r = await client.post(f"/api/documents/item/{doc_id}/reprocess", headers=h)
     assert r.status_code == 429
+
+
+# --- stored bytes ------------------------------------------------------------
+
+async def test_an_account_cannot_fill_the_database(client, account, monkeypatch):
+    """25 MB a file with no ceiling on the count let one account fill Mongo, and
+    a full cluster on the free tier does not degrade — it blocks writes for
+    everything on it. This project has already done that to itself once."""
+    h, pid = account
+    pdf = _unique_pdf()
+    # A cap just above one file, so the second is the one that does not fit.
+    monkeypatch.setattr(settings, "max_account_bytes", len(pdf) + 10)
+
+    first = await client.post(f"/api/documents/{pid}", headers=h,
+                              files={"file": ("a.pdf", pdf, "application/pdf")})
+    assert first.status_code == 202
+
+    second = await client.post(f"/api/documents/{pid}", headers=h,
+                               files={"file": ("b.pdf", _unique_pdf(), "application/pdf")})
+    assert second.status_code == 507
+    assert "limit" in second.json()["detail"]
+
+
+async def test_re_sending_a_file_already_held_is_not_refused_for_space(
+    client, account, monkeypatch
+):
+    """It stores nothing, so refusing it for storage it would not consume would
+    be a confusing way to say "you already have this"."""
+    h, pid = account
+    pdf = _unique_pdf()
+    first = await client.post(f"/api/documents/{pid}", headers=h,
+                              files={"file": ("a.pdf", pdf, "application/pdf")})
+    assert first.status_code == 202
+
+    # Now set the cap below what is already stored: the account is over.
+    monkeypatch.setattr(settings, "max_account_bytes", 1)
+    again = await client.post(f"/api/documents/{pid}", headers=h,
+                              files={"file": ("a.pdf", pdf, "application/pdf")})
+    assert again.status_code == 507  # already full, refused before reading
+
+
+async def test_deleting_a_report_frees_the_space(client, account, monkeypatch):
+    h, pid = account
+    pdf = _unique_pdf()
+    monkeypatch.setattr(settings, "max_account_bytes", len(pdf) + 10)
+    doc_id = (await client.post(f"/api/documents/{pid}", headers=h,
+              files={"file": ("a.pdf", pdf, "application/pdf")})).json()["id"]
+
+    assert (await client.post(f"/api/documents/{pid}", headers=h,
+            files={"file": ("b.pdf", _unique_pdf(), "application/pdf")})).status_code == 507
+
+    assert (await client.delete(f"/api/documents/item/{doc_id}",
+                                headers=h)).status_code == 204
+
+    assert (await client.post(f"/api/documents/{pid}", headers=h,
+            files={"file": ("c.pdf", _unique_pdf(), "application/pdf")})).status_code == 202

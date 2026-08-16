@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     log_level: str = "info"
 
     max_upload_bytes: int = 25 * 1024 * 1024
+    # Total stored PDF bytes one account may hold. 25 MB a file with no ceiling
+    # on the count let a single account fill the database, and on the free
+    # Atlas tier a full cluster does not degrade — it *blocks writes for
+    # everyone on it*, which this project has already done to itself once.
+    max_account_bytes: int = 200 * 1024 * 1024
 
     # EmailJS, called server-side with the private key. Absent keys disable
     # sending rather than failing: a dev machine without them still runs, and

@@ -98,3 +98,50 @@ async def guard_queue_depth(user) -> None:
             f"{depth} of your documents are still being processed. "
             "They will finish on their own — try again in a minute.",
         )
+
+
+# --- stored bytes ------------------------------------------------------------
+
+# Documents are stored as encrypted blobs in Mongo, capped at 25 MB each with
+# no ceiling on how many. One account could therefore fill the database, and a
+# full cluster on the free Atlas tier does not degrade gracefully: it blocks
+# writes for *everything* on it. This project has already done that to itself
+# once, running the test suite in parallel.
+#
+# Bounds one actor, not the cluster. Ten accounts at the cap still fill a small
+# tier, and nothing here pretends otherwise — the deployment's real protection
+# is the storage it pays for. What this stops is a single account, or a single
+# stolen credential, taking the whole system down by uploading.
+
+
+async def storage_used(user) -> int:
+    """Total stored bytes across every document this account uploaded."""
+    from app.models.document import LabDocument
+
+    return await LabDocument.find(
+        LabDocument.uploaded_by == user.id
+    ).sum(LabDocument.size_bytes) or 0
+
+
+def guard_storage(used: int, adding: int = 0) -> None:
+    """Refuse an upload that would take the account past its storage cap.
+
+    Called twice by design: once before the request body is read, so an account
+    already at the cap is refused without spending the bandwidth, and once with
+    the real size, because only then is it known whether this file fits.
+
+    507 rather than 413. The payload may be perfectly small; what is full is the
+    account, and saying "request too large" about a 2 MB file would send someone
+    off shrinking a PDF that was never the problem.
+    """
+    from app.config import settings
+
+    cap = settings.max_account_bytes
+    if used + adding <= cap:
+        return
+    mb = lambda n: f"{n / (1024 * 1024):.0f} MB"  # noqa: E731 - local formatting only
+    raise HTTPException(
+        status.HTTP_507_INSUFFICIENT_STORAGE,
+        f"This account is storing {mb(used)} of its {mb(cap)} limit. "
+        "Delete a report you no longer need, then try again.",
+    )

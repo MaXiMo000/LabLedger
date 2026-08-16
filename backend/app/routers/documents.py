@@ -14,7 +14,7 @@ from app.models.document import DocStatus, LabDocument
 from app.models.observation import Observation
 from app.models.user import User
 from app.security import decrypt_field, encrypt_field
-from app.throttle import guard_queue_depth
+from app.throttle import guard_queue_depth, guard_storage, storage_used
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -96,6 +96,10 @@ async def upload(
     # Checked before the body is read: refusing a 25 MB upload after receiving
     # it spends the bandwidth anyway.
     await guard_queue_depth(user)
+    # Read once, used twice: refuse an account that is already full before
+    # spending the bandwidth, then again below once the real size is known.
+    used = await storage_used(user)
+    guard_storage(used)
     data = await file.read()
 
     if not data:
@@ -115,6 +119,11 @@ async def upload(
         LabDocument.patient_id == patient.id, LabDocument.sha256 == digest
     ):
         return DocumentOut.of(existing)  # idempotent re-upload
+
+    # After the dedup return, not before: re-sending a file already held stores
+    # nothing, and refusing it for storage it would not consume would be a
+    # confusing way to say "you already have this".
+    guard_storage(used, len(data))
 
     doc = LabDocument(
         patient_id=patient.id,
