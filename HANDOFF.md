@@ -58,8 +58,21 @@ npm run worker   # arq — extraction and mapping
 npm run dev      # Vite :5173, proxies /api to :8000
 ```
 
-**Test account:** `demo@labledger.dev` / `correct-horse-battery`
-Also real: `ritishsaini1995@gmail.com` (Google OAuth, real reports).
+**Test account:** `demo@labledger.dev` — password held out of band, ask the
+owner. It is deliberately not written here: **this repository is public**, and
+the account is live on the deployed instance, so a password in this file is a
+working key to a running system rather than a convenience for the next
+session. The one that used to sit here has been rotated and is dead; it remains
+in git history, which is harmless now and is why rotating beat redacting.
+
+Its record carries **synthetic demographics** for the same reason. A public
+demo that shows a real name and date of birth is publishing exactly the thing
+the rest of this system encrypts at rest — and the date of birth is not
+decoration, it selects the reference interval for every result.
+
+Also real: `ritishsaini1995@gmail.com` (Google OAuth, real reports). Reachable
+only through that Google account or its mailbox — no other account can see it,
+since a new account holds nothing until granted.
 
 **A stale API process cost an hour once.** `npm run api` carries `--reload`; a
 manually started `uvicorn` without it serves whatever code was loaded at boot
