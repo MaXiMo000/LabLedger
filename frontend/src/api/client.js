@@ -80,7 +80,13 @@ api.interceptors.response.use(
       }
     }
 
-    if (response?.status === 403) {
+    // `deps` raises 403 for a token that cannot be used at all, so dropping the
+    // session is right by default. But two refusals are about the *action*
+    // rather than the credential — the MFA wall, and an invitation addressed to
+    // someone else — and both mark themselves. Signing those callers out would
+    // clear the screen the message just told them to open, which for the MFA
+    // wall is precisely the lockout the backend's grace period exists to avoid.
+    if (response?.status === 403 && response.headers?.["x-credential-valid"] !== "1") {
       setAccessToken(null);
       onSessionLost();
     }

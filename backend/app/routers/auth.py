@@ -783,6 +783,10 @@ async def claim_invite(
             status.HTTP_403_FORBIDDEN,
             f"This invitation was sent to {row.email}. "
             "Sign in as that account to accept it.",
+            # Signed in perfectly well, just not as the invited address. Ending
+            # the session over it would be absurd — and would clear the screen
+            # showing them which account to use.
+            headers={"X-Credential-Valid": "1"},
         )
 
     patient = await Patient.get(row.patient_id)

@@ -111,6 +111,13 @@ async def _require_second_factor(user: User, patient: Patient) -> None:
             status.HTTP_403_FORBIDDEN,
             "Two-factor authentication is required to open a record shared with "
             "you. Turn it on under Security.",
+            # The credential is fine; the *action* is refused. `deps` raises 403
+            # for a token that cannot be used at all, and the client drops the
+            # session on that — correctly. Without this marker it would drop the
+            # session here too, signing the caller out of the Security screen
+            # this message just told them to open, which is the exact lockout
+            # the grace period exists to avoid.
+            headers={"X-Credential-Valid": "1"},
         )
 
 
