@@ -118,8 +118,13 @@ async def storage_used(user) -> int:
     """Total stored bytes across every document this account uploaded."""
     from app.models.document import LabDocument
 
+    # Only what is still held. `size_bytes` survives disposal as a record of
+    # what the document was, but the cap is about storage in use — counting
+    # bytes already reclaimed would leave somebody blocked from uploading by
+    # files that no longer exist.
     return await LabDocument.find(
-        LabDocument.uploaded_by == user.id
+        LabDocument.uploaded_by == user.id,
+        {"blob_enc": {"$ne": None}},
     ).sum(LabDocument.size_bytes) or 0
 
 

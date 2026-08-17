@@ -40,7 +40,14 @@ class LabDocument(Document):
     extraction_method: str | None = None  # "tables" | "text" | "ocr"
     row_count: int = 0
 
-    blob_enc: bytes  # the PDF itself
+    # The PDF itself. Optional because it can be disposed of while everything
+    # extracted from it stays: the blob is very nearly all of a document's
+    # bytes, and the numbers are the clinical value. `blob_purged_at` records
+    # that this happened, so a missing blob is never confused with one that was
+    # never stored — the file endpoint answers 410 rather than 404, because
+    # "held and disposed of" is a different statement from "no such thing".
+    blob_enc: bytes | None = None
+    blob_purged_at: datetime | None = None
     raw_text_enc: bytes | None = None
 
     created_at: datetime = Field(default_factory=utcnow)

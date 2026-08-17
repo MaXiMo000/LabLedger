@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # Atlas tier a full cluster does not degrade — it *blocks writes for
     # everyone on it*, which this project has already done to itself once.
     max_account_bytes: int = 200 * 1024 * 1024
+    # Days to keep the stored PDF after upload. **0 disables disposal**, which
+    # is the default on purpose: deleting somebody's data because a setting was
+    # left at its default is the wrong way round. Only the blob goes — the
+    # results, their printed names and the audit trail all survive it.
+    document_retention_days: int = 0
 
     # EmailJS, called server-side with the private key. Absent keys disable
     # sending rather than failing: a dev machine without them still runs, and

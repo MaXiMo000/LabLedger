@@ -37,6 +37,13 @@ silently, because a failed send never fails the operation it belongs to.
 | Frontend | builds clean |
 | LOINC | 58,252 codes in Mongo `labledger.loinc` |
 
+**Free-tier latency can look exactly like a hang.** A file whose tests each
+pass in 4-17 seconds on their own ran for over ten minutes as a file, and so
+did an untouched one that had taken thirty seconds an hour earlier. Storage was
+59 MB of the 512 MB limit, so it was not the quota — the shared tier was simply
+throttling. Before debugging a "hang", re-run a file you have not touched: if
+that is slow too, it is the cluster, not the change.
+
 **The suite is slow and cannot be parallelised on the current tier.** Every
 round-trip goes to Atlas. `pytest-xdist` needs one database per worker, each
 needs its own copy of the LOINC table, and four of those exceeded the 512 MB
@@ -502,9 +509,23 @@ structurally sound and in the right unit.
   cluster — ten accounts at the cap still fill a small tier, and the real
   protection is the storage a deployment pays for. 507, not 413: the payload
   may be small, what is full is the account.
-- **A retention policy that does something.** Documents are kept forever;
-  `ARCHITECTURE.md` lists retention as out of scope, which is honest but is also
-  the thing an assessor asks about first.
+- ~~**A retention policy that does something.**~~ Partly — `DOCUMENT_RETENTION_DAYS`
+  (0, off by default) disposes of the **stored PDF only**, nightly, from the
+  worker. The results, their printed names and the audit trail all survive it,
+  which is the point: the blob is very nearly all of a document's bytes and the
+  numbers are the clinical value.
+
+  **Call it what it is: disposal of source documents, not a retention policy.**
+  A retention policy says how long clinical records live and who may end them.
+  This says how long the scanned page lives. What is lost is real — a number
+  can still be traced to its printed name, value and page number, but not back
+  to the image it was read from — so the file endpoint answers **410 Gone**, not
+  404, and reprocess refuses rather than queueing work that would fail a minute
+  later.
+
+  It also made `storage_used` count only what is still held. It summed
+  `size_bytes`, which survives disposal, so an account whose files had been
+  reclaimed stayed blocked from uploading by bytes nobody was storing.
 - ~~**Audit the audit log.**~~ Done — `tests/test_choke_point.py` reads the
   running app's route table and each handler's source. Three properties: a route
   naming a `patient_id` must scope to it, no route may reach records without

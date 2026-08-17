@@ -38,6 +38,10 @@ class DocumentOut(BaseModel):
     extraction_method: str | None
     error: str | None
     created_at: datetime
+    # Set once the stored PDF has been disposed of. The client needs this to
+    # explain why "open the original" is gone, instead of offering a link that
+    # answers 410.
+    blob_purged_at: datetime | None = None
 
     @classmethod
     def of(cls, d: LabDocument) -> "DocumentOut":
@@ -47,7 +51,7 @@ class DocumentOut(BaseModel):
                    date_source=d.date_source, page_count=d.page_count,
                    row_count=d.row_count, size_bytes=d.size_bytes,
                    extraction_method=d.extraction_method, error=d.error,
-                   created_at=d.created_at)
+                   created_at=d.created_at, blob_purged_at=d.blob_purged_at)
 
 
 class ObservationOut(BaseModel):
@@ -170,6 +174,15 @@ async def get_document(document_id: str, user: User = Depends(current_user)):
 async def get_file(document_id: str, user: User = Depends(current_user)):
     """Stream the decrypted PDF back to its owner."""
     doc = await repo.get_document(user, document_id)
+    if doc.blob_enc is None:
+        # 410, not 404. The document is right here and its results are on the
+        # chart; what is gone is the stored page, disposed of on schedule.
+        # Answering "not found" would send someone hunting for a bug.
+        raise HTTPException(
+            status.HTTP_410_GONE,
+            "The stored PDF for this report has been disposed of under the "
+            "retention policy. Its results are unaffected.",
+        )
     # The stored PDF carries far more than the extracted rows; taking a copy of
     # it is the single most sensitive action in the API.
     await record("download", "document", doc.id, patient_id=doc.patient_id)
@@ -196,6 +209,14 @@ async def reprocess(request: Request, document_id: str, user: User = Depends(cur
     shares a process with the API.
     """
     doc = await repo.get_document(user, document_id, access.CAN_UPLOAD)
+    if doc.blob_enc is None:
+        # Nothing left to extract from. Re-queueing would mark the document
+        # failed a minute later, which looks like a bug rather than a policy.
+        raise HTTPException(
+            status.HTTP_410_GONE,
+            "The stored PDF for this report has been disposed of, so it cannot "
+            "be processed again. Upload it afresh if you still have it.",
+        )
     await guard_queue_depth(user)
     doc.status, doc.error = "queued", None
     await doc.save()

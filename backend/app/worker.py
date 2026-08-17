@@ -11,6 +11,7 @@ import logging
 from datetime import UTC, date
 from typing import ClassVar
 
+from arq import cron
 from arq.connections import RedisSettings
 from beanie import PydanticObjectId
 
@@ -25,6 +26,7 @@ from app.pipeline.extract import extract
 from app.pipeline.llm import LLMUnavailableError, adjudicate
 from app.pipeline.mapping import resolve, should_force_review
 from app.pipeline.ranges import age_on, flag_against_range, resolve_range
+from app.pipeline.retention import purge_expired_blobs
 from app.pipeline.units import parse_value, to_canonical
 from app.security import decrypt_field, decrypt_str, encrypt_field
 
@@ -209,6 +211,17 @@ async def _component_of(loinc_code: str) -> str | None:
     return entry.component if entry else None
 
 
+async def dispose_of_expired(_ctx: dict) -> str:
+    """Nightly disposal of stored PDFs past their retention age.
+
+    A no-op unless DOCUMENT_RETENTION_DAYS is set, which it is not by default.
+    Runs here rather than on a request because it is bulk work nobody is
+    waiting for, and the worker is where bulk work belongs.
+    """
+    purged = await purge_expired_blobs()
+    return f"{purged} purged"
+
+
 async def startup(_ctx: dict) -> None:
     """Open the database for the worker process."""
     await init_db()
@@ -223,6 +236,10 @@ class WorkerSettings:
     """arq entry point: `arq app.worker.WorkerSettings`."""
 
     functions: ClassVar = [process_document]
+    # 03:12 rather than on the hour: nothing else here runs on a schedule, but
+    # every cron in the world fires at :00 and this one has no reason to join
+    # the queue behind them.
+    cron_jobs: ClassVar = [cron(dispose_of_expired, hour=3, minute=12)]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
