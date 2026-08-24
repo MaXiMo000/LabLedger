@@ -3,3 +3,20 @@
 
 # Claude Code
 .claude/
+
+# Secrets. backend/ and frontend/ each ignore their own .env, but a file at
+# the repo root -- or a key anywhere -- was not covered, and `git add .` only
+# has to win once. A secret removed in a later commit is still in the pack
+# file and still needs rotating.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+__pycache__/

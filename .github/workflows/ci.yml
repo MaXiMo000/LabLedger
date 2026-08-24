@@ -1,0 +1,113 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only by default; nothing here needs more except the SARIF upload.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    # ~356 tests against a real MongoDB, because the things worth testing here
+    # are queries and indexes. The README notes the suite takes about twenty
+    # minutes against a shared Atlas tier and says a local mongod is the fix --
+    # this is that, as a service container. It runs in roughly two minutes.
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ENV: test
+      MONGO_URI: mongodb://127.0.0.1:27017
+      MONGO_DB_NAME: labledger
+      # Test-only values. Real secrets are not needed to run the suite, and the
+      # LLM stage is stubbed by an autouse fixture.
+      JWT_SECRET: ci_only_not_a_real_secret
+      FIELD_ENCRYPTION_KEY: dGVzdC1rZXktZm9yLWNpLW9ubHktMzJieXRlcy0wMDA=
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+        working-directory: backend
+
+      # Without this every printed test name resolves to `unmapped` and the
+      # mapping assertions stop meaning anything. The data ships in the repo,
+      # so this needs no network and no LOINC account.
+      - name: Seed the LOINC table
+        run: python scripts/seed_loinc.py --drop
+        working-directory: backend
+
+      - name: Test
+        run: python -m pytest -q --junitxml=results.xml
+        working-directory: backend
+
+      # A suite that did not run has proved nothing. pytest exits 5 on "no
+      # tests collected", but a config change can also silently shrink what is
+      # collected while still exiting 0 -- so the count is pinned.
+      - name: The suite actually ran
+        if: always()
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          FLOOR = 340
+          try:
+              s = ET.parse("results.xml").getroot()
+          except Exception as e:
+              sys.exit(f"no parseable results.xml -- the suite did not run ({e})")
+          suite = s if s.tag == "testsuite" else s[0]
+          total = int(suite.get("tests", 0))
+          bad = int(suite.get("failures", 0)) + int(suite.get("errors", 0))
+          print(f"{total} tests, {bad} failing, {suite.get('skipped')} skipped")
+          if total < FLOOR:
+              sys.exit(f"only {total} tests ran, floor is {FLOOR} -- the suite shrank")
+          if bad:
+              sys.exit(f"{bad} failing")
+          PY
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  carabiner:
+    # The scanner its author wrote, gating the repo that handles lab reports.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: pip install carabiner-sec
+      - run: carabiner scan --all --fail-on medium --sarif carabiner.sarif
+      - uses: github/codeql-action/upload-sarif@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef  # codeql-bundle-v2.26.3
+        if: always()
+        with:
+          sarif_file: carabiner.sarif

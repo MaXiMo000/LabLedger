@@ -63,6 +63,18 @@ async def _ensure_loinc(mongo: AsyncIOMotorClient) -> None:
                 batch.clear()
         if batch:
             await dst.loinc.insert_many(batch)
+
+    # The count comparison above cannot tell "already copied" from "both are
+    # empty" -- 0 != 0 is false, so an unseeded database skips the copy and
+    # reports itself done. Against a fresh mongo the mapping tests then fail
+    # eight different ways and none of them mentions LOINC. Say it once, here.
+    if await dst.loinc.estimated_document_count() == 0:
+        raise RuntimeError(
+            f"the LOINC table is empty in both {settings.mongo_db_name!r} and "
+            f"{TEST_DB!r}. Run `python scripts/seed_loinc.py` first -- without it "
+            "every row resolves to `unmapped` and the mapping assertions are "
+            "meaningless."
+        )
     _loinc_copied = True
 
 

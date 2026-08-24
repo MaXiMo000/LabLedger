@@ -188,7 +188,7 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-~250 tests. They run against a real MongoDB (`labledger_test`) rather than
+356 tests. They run against a real MongoDB (`labledger_test`) rather than
 mocks, because the things worth testing here are queries and indexes.
 
 The suite takes around twenty minutes against a remote Atlas cluster, and
@@ -196,6 +196,21 @@ The suite takes around twenty minutes against a remote Atlas cluster, and
 its own database, each needs its own copy of the 58k-row LOINC table, and four
 of those exceeds 512 MB and blocks writes on the whole cluster. A local `mongod`
 or a paid tier is the fix; a flag is not.
+
+Against a local `mongod` the whole suite finishes in **under two minutes**,
+which is what CI does — a `mongo:7` service container, seeded from the LOINC
+subset committed under `backend/data/`, so it needs no network and no Atlas
+tier. Locally:
+
+```bash
+docker run -d -p 27017:27017 mongo:7
+cd backend && python scripts/seed_loinc.py --drop
+MONGO_URI=mongodb://127.0.0.1:27017 .venv/bin/python -m pytest -q
+```
+
+Seeding is not optional. Without it every printed name resolves to `unmapped`
+and the mapping assertions stop meaning anything — the test fixture now refuses
+to run against an empty LOINC table rather than letting that look like a pass.
 
 The LLM is stubbed by an autouse fixture. Opt out with `@pytest.mark.live_llm`,
 and expect a paid API call.
