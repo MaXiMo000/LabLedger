@@ -31,6 +31,15 @@ jobs:
       # LLM stage is stubbed by an autouse fixture.
       JWT_SECRET: ci_only_not_a_real_secret
       FIELD_ENCRYPTION_KEY: dGVzdC1rZXktZm9yLWNpLW9ubHktMzJieXRlcy0wMDA=
+      # Required by Settings; nothing in the suite talks to a live redis --
+      # arq is the worker's concern, not the API's.
+      REDIS_URL: redis://127.0.0.1:6379
+      # Six tests in test_mapping.py cover the LLM stage's safety properties
+      # (it honours "none", cannot smuggle a code, never puts the measured
+      # value in the prompt). The HTTP call is stubbed by an autouse fixture,
+      # but llm.py refuses to proceed with an unset key, so this has to be
+      # non-empty. It is not a real key and must never be one.
+      GEMINI_API_KEY: stubbed-by-autouse-fixture-not-a-real-key
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
