@@ -113,6 +113,7 @@ locum covering a shift. Ownership can be transferred.
 | Wrong owner | **404, not 403** — never confirm someone else's record exists |
 | At rest | PDF bytes, extracted text, DOB, sex, MRN, TOTP secret — AES-256-GCM |
 | Logs | ids only. Never a filename: `oncology_panel.pdf` is a diagnosis |
+| Caching | every response is `private, no-store` — PHI never reaches a disk cache or an intermediary proxy |
 | Audit | every read and write of clinical data, append-only, survives account deletion |
 
 Two rules shape most of it. **Access and audit both live at one choke point**,
@@ -188,7 +189,7 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-356 tests. They run against a real MongoDB (`labledger_test`) rather than
+357 tests. They run against a real MongoDB (`labledger_test`) rather than
 mocks, because the things worth testing here are queries and indexes.
 
 The suite takes around twenty minutes against a remote Atlas cluster, and

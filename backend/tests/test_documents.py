@@ -156,6 +156,23 @@ async def test_another_user_cannot_read_document(client):
     assert (await client.get(f"/api/documents/item/{doc_id}", headers=a)).status_code == 200
 
 
+async def test_json_responses_are_never_cached(client):
+    """The PDF route set Cache-Control itself; every JSON endpoint did not, so
+    results, dates of birth and MRNs were cacheable by default -- by the
+    browser's disk cache and by any proxy between here and the clinician.
+
+    Checked on a listing that carries PHI and on an unauthenticated 401, since
+    the header comes from middleware and has to apply to both."""
+    h, pid = await account(client)
+    listing = await client.get(f"/api/documents/{pid}", headers=h)
+    assert listing.status_code == 200
+    assert listing.headers["cache-control"] == "private, no-store"
+
+    denied = await client.get(f"/api/documents/{pid}")
+    assert denied.status_code == 401
+    assert denied.headers["cache-control"] == "private, no-store"
+
+
 async def test_file_download_returns_pdf(client):
     h, pid = await account(client)
     doc_id = (await upload(client, h, pid)).json()["id"]
@@ -163,6 +180,9 @@ async def test_file_download_returns_pdf(client):
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/pdf"
     assert r.headers["x-content-type-options"] == "nosniff"
+    # PHI must not be written to a browser's disk cache or held by any
+    # proxy between here and the clinician.
+    assert r.headers["cache-control"] == "private, no-store"
     assert r.content == PDF
 
 

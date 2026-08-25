@@ -119,6 +119,12 @@ async def security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     # API returns JSON only; the SPA ships its own CSP from the frontend host.
     response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    # Every response here can carry PHI — results, dates of birth, MRNs — and
+    # without this they are cacheable by default: by the browser's disk cache,
+    # and by any intermediary proxy on a corporate network. `private` keeps
+    # shared caches out, `no-store` keeps it off disk entirely. setdefault, so
+    # a route that already chose its own value (the PDF download) keeps it.
+    response.headers.setdefault("Cache-Control", "private, no-store")
     if settings.is_prod:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response

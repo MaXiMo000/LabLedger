@@ -29,6 +29,7 @@ The controls the design depends on, all covered by the test suite:
 | Wrong owner | **404, not 403** — a refusal never confirms a record exists |
 | At rest | PDF bytes, extracted text, DOB, sex, MRN and TOTP secret are AES-256-GCM |
 | Logs | ids only, never filenames — `oncology_panel.pdf` is itself a diagnosis |
+| Caching | every response carries `Cache-Control: private, no-store` |
 | Audit | every read and write of clinical data, append-only, survives account deletion |
 
 Two rules shape most of it. **Access and audit live at one choke point**,
