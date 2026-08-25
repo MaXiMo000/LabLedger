@@ -285,6 +285,120 @@ def _charted(
     return points, excluded, unit, display
 
 
+class AttentionItem(BaseModel):
+    """One result that a human should look at, with the basis for saying so."""
+
+    observation_id: str
+    document_id: str
+    loinc_code: str | None
+    display: str | None
+    collected_at: datetime | None
+    value: float | None
+    unit: str | None
+    operator: str | None
+    flag: str
+    ref_low: float | None
+    ref_high: float | None
+    ref_source: str
+    critical: CriticalOut | None = None
+
+
+class Attention(BaseModel):
+    """What needs looking at for one patient, and what could not be judged.
+
+    The counts are not padding. `critical: []` on its own is the shape of a
+    reassurance this system is not entitled to give: a result with no published
+    limit for its analyte, or one still awaiting a mapping confirmation, has not
+    been found safe — it has not been assessed. Returning those totals beside
+    the findings is what keeps "nothing crossed a limit" from being read as
+    "nothing is wrong", which is the same three-states rule flags.critical_for
+    already refuses to collapse.
+    """
+
+    critical: list[AttentionItem]
+    abnormal: list[AttentionItem]
+    #: Results compared against a published critical limit and found within it.
+    assessed_within_limits: int
+    #: Results with no published limit for that analyte, or whose unit does not
+    #: match the limit's. Not checked — never "fine".
+    not_assessable: int
+    #: Results whose mapping is still awaiting a human. Excluded from every
+    #: figure above, because an unconfirmed code may not be this analyte at all.
+    awaiting_review: int
+
+
+# Newest first: the reason to open this screen is "what has just come back".
+_ATTENTION_ORDER = ("-collected_at", "-_id")
+
+
+@router.get("/{patient_id}/attention", response_model=Attention)
+async def attention(
+    patient_id: str,
+    user: User = Depends(current_user),
+):
+    """Everything currently worth a human's attention for this patient.
+
+    `/series` answers "how has this analyte moved", which requires already
+    knowing which analyte to ask about. This answers the question that comes
+    first — and the one a stack of reports makes hard: which results, anywhere
+    in this patient's history, crossed a published critical limit or fell
+    outside their reference interval.
+
+    Nothing here is a recommendation. Each item carries the value, the interval
+    it was judged against, where that interval came from, and the threshold it
+    crossed, so the reader can reach the same conclusion themselves.
+    """
+    patient, q = await repo.patient_observations(user, patient_id)
+    rows = await q.sort(*_ATTENTION_ORDER).to_list()
+
+    critical: list[AttentionItem] = []
+    abnormal: list[AttentionItem] = []
+    assessed_within = 0
+    not_assessable = 0
+    awaiting = 0
+
+    for o in rows:
+        if o.review_status == "pending":
+            # An unconfirmed mapping may not be the analyte it appears to be,
+            # so judging it against that analyte's limits would be a guess.
+            awaiting += 1
+            continue
+
+        loinc = o.loinc_code
+        crit = None
+        if loinc and o.canonical_value is not None and o.canonical_unit is not None:
+            crit = flags.critical_for(loinc, o.canonical_value, o.canonical_unit)
+            if flags.is_assessed(loinc, o.canonical_unit):
+                if crit is None:
+                    assessed_within += 1
+            else:
+                not_assessable += 1
+        else:
+            not_assessable += 1
+
+        if crit is None and o.flag not in ("low", "high", "abnormal"):
+            continue
+
+        item = AttentionItem(
+            observation_id=str(o.id), document_id=str(o.document_id),
+            loinc_code=loinc, display=o.loinc_display,
+            collected_at=o.collected_at,
+            value=o.canonical_value, unit=o.canonical_unit,
+            operator=o.value_operator, flag=o.flag,
+            ref_low=o.ref_low, ref_high=o.ref_high, ref_source=o.ref_source,
+            critical=CriticalOut(**vars(crit)) if crit else None,
+        )
+        (critical if crit else abnormal).append(item)
+
+    await record("read", "attention", patient_id=patient.id)
+    return Attention(
+        critical=critical, abnormal=abnormal,
+        assessed_within_limits=assessed_within,
+        not_assessable=not_assessable,
+        awaiting_review=awaiting,
+    )
+
+
 class PanelTrack(BaseModel):
     """One analyte's line inside a panel overlay.
 

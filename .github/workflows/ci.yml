@@ -70,7 +70,7 @@ jobs:
         run: |
           python - <<'PY'
           import sys, xml.etree.ElementTree as ET
-          FLOOR = 350
+          FLOOR = 360
           try:
               s = ET.parse("results.xml").getroot()
           except Exception as e:

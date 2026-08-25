@@ -19,6 +19,9 @@ AuditAction = Literal[
 
 ResourceType = Literal[
     "document", "observation", "alias", "series", "review", "account", "session",
+    # The attention view reads every observation a patient has, so it is worth
+    # distinguishing in the trail from a single-analyte series read.
+    "attention",
 ]
 
 

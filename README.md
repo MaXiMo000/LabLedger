@@ -43,6 +43,32 @@ Nothing auto-accepts below the confidence floor, and **critical analytes always
 reach a human** when a probabilistic stage decided. Confidence is statistical;
 those failures are categorical.
 
+### What needs looking at
+
+`/api/observations/{patient}/attention` answers the question that comes before
+"how has this analyte moved": which results, anywhere in this patient's
+history, crossed a published critical limit or fell outside their reference
+interval. `/series` cannot answer it — you have to already know which analyte
+to ask about, and a stack of reports is exactly where that knowledge goes
+missing.
+
+Each finding carries the value, the interval it was judged against, where that
+interval came from, and the threshold it crossed. Nothing is a recommendation.
+
+It also returns three counts, and those are the load-bearing part:
+
+| | |
+|---|---|
+| `assessed_within_limits` | compared against a published limit, and inside it |
+| `not_assessable` | no published limit for that analyte, or the unit does not match one |
+| `awaiting_review` | mapping not yet confirmed, so judging it would be a guess |
+
+`critical: []` on its own has the shape of an all-clear, and this system is not
+entitled to give one. A result with no published limit has not been found safe;
+it has not been checked. Returning the totals beside the findings is the same
+three-states rule `flags.critical_for` already refuses to collapse, carried
+through to the API.
+
 ### Beyond the reference interval
 
 - **Critical values.** A potassium of 7.0 is not "high", it is a phone call.
@@ -189,7 +215,7 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-357 tests. They run against a real MongoDB (`labledger_test`) rather than
+366 tests. They run against a real MongoDB (`labledger_test`) rather than
 mocks, because the things worth testing here are queries and indexes.
 
 The suite takes around twenty minutes against a remote Atlas cluster, and
