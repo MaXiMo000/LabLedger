@@ -549,8 +549,36 @@ structurally sound and in the right unit.
 - **The upload screen does not say what happens next.** A dropped file goes
   `queued → extracting → mapping → needs_review`, and only the last one is
   actionable. Say so on the screen rather than in status labels.
-- **Keyboard path through the review queue.** Confirm/reject/skip without the
-  mouse is the difference between reviewing forty-four items and abandoning it.
+- ~~**Keyboard path through the review queue.**~~ Done. `j`/`k` move a cursor,
+  `1`–`9` choose a candidate, `Enter` confirms, `x` rejects, `/` reaches the
+  search field and `Escape` leaves it. There is no skip key: moving the cursor
+  *is* skipping, and a second key for it would only be a second way to lose
+  your place.
+
+  **The cursor is an index into a list that shrinks underneath it**, which is
+  how it advances — settle the row it points at, the row after it takes that
+  position, and the cursor is already on the next thing to do. Clamped rather
+  than corrected, so settling the last row lands on the new last row instead of
+  running off the end. Focus follows it for real (`tabIndex={-1}` on the row),
+  not as a class, so a screen reader is told the cursor moved and the row is
+  scrolled into view without asking — but only once a key has been pressed,
+  because moving focus on mount yanks the page for somebody who arrived with a
+  mouse.
+
+  **`keyAction` is pure and tested; the listeners are not.** Same split as
+  `idleDelayMs`: two `addEventListener` calls and a cleanup that mirrors them
+  is what reading the file shows, while *which keystrokes this claims* is what
+  can be quietly wrong. The expensive failure is claiming one it should not
+  have — a `window` handler sees every keystroke on the screen, so typing
+  "flux" into a LOINC search must not reject the row on the `x`. Text fields,
+  modifier combinations, and Enter on an already-focused button are all
+  returned as "not ours", and each has a test.
+
+  Two bugs the screen had all along surfaced while driving it: the tally
+  counted rejections as **rules learned**, when `/reject` answers
+  `alias_written: false` and means it — the one counter whose job is to make
+  convergence visible rather than claimed was overstating it. And a queue of
+  one read "1 result need you".
 - **`prefers-reduced-motion`.** The cascade scene animates unconditionally.
 - **A real 404 route.** Unknown `/app/*` paths currently render the shell empty.
 

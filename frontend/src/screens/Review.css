@@ -1,4 +1,38 @@
-.review__lede { color: var(--ink-body); max-width: 58ch; margin-bottom: var(--s6); }
+.review__lede { color: var(--ink-body); max-width: 58ch; margin-bottom: var(--s3); }
+
+/* ---- the keyboard legend -------------------------------------------------
+   Set in the caption size and faint ink: it is a reference somebody reads
+   once and then stops seeing, so it must not compete with the queue it sits
+   above. Hidden where there is no keyboard — a phone showing key caps it
+   cannot press is describing somebody else's screen. */
+
+.review__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1);
+  margin: 0 0 var(--s6);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+.review__keys-sep { margin: 0 var(--s2); color: var(--rule-strong); }
+
+.review__keys kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1;
+  padding: 3px 5px;
+  margin-right: 2px;
+  color: var(--ink-muted);
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: var(--radius);
+}
+
+@media (hover: none) {
+  .review__keys { display: none; }
+}
 
 .ritems { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s5); }
 
@@ -8,6 +42,18 @@
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
 }
+
+/* The cursor. A rule down the edge rather than a fill or a ring: several rows
+   are on screen at once, so it has to be findable at a glance without becoming
+   the loudest thing in a queue whose whole content is the evidence. It is also
+   the focus indicator — the row really does take focus — so the default
+   outline is dropped only because this replaces it. */
+.ritem--on {
+  border-color: var(--rule-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.ritem:focus,
+.ritem:focus-visible { outline: none; }
 
 /* The printed line, verbatim and set apart: this is the evidence. */
 .ritem__printed {
@@ -31,7 +77,7 @@
 
 .cand {
   display: grid;
-  grid-template-columns: 5.5rem 1fr auto;
+  grid-template-columns: 1.1rem 5.5rem 1fr auto;
   gap: var(--s3);
   width: 100%;
   padding: var(--s3);
@@ -46,9 +92,19 @@
    row and a filled state would read as already-confirmed. */
 .cand--on { border-color: var(--accent); background: var(--accent-wash); }
 
+/* The digit that picks this row. Faintest ink on the screen: it is an
+   accelerator, not part of the evidence, and it must not read as an ordering
+   the candidates have been ranked into. */
+.cand__key  { font-size: var(--text-caption); color: var(--rule-strong); }
 .cand__code { font-size: var(--text-small); color: var(--ink); }
 .cand__name { font-size: var(--text-small); color: var(--ink-body); }
 .cand__why  { font-size: var(--text-caption); color: var(--ink-faint); white-space: nowrap; }
+
+/* No keyboard, no accelerators to advertise — same test the legend uses. */
+@media (hover: none) {
+  .cand { grid-template-columns: 5.5rem 1fr auto; }
+  .cand__key { display: none; }
+}
 
 .ritem__actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }
 
@@ -56,6 +112,8 @@
   .ritem { padding: var(--s4); }
   .ritem__meta { margin-left: 0; width: 100%; }
   .cand { grid-template-columns: 1fr; gap: 2px; }
+  /* Stacked, the digit would take a line of its own for one character. */
+  .cand__key { display: none; }
   .cand__why { white-space: normal; }
 }
 
