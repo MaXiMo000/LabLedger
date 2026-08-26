@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, messageFor } from "../api/client";
 import Modal from "../components/Modal";
 import "./Aliases.css";
@@ -142,6 +143,10 @@ export default function Aliases() {
             Confirming a mapping in the review queue teaches the system how this
             lab prints that test. Those rules will appear here.
           </p>
+          {/* An empty state that explains itself and offers nothing to do
+              leaves the reader where they started. The queue is where these
+              come from, so that is the door. */}
+          <Link className="btn btn--primary" to="/app/review">Go to the review queue</Link>
         </div>
       ) : (
         <ul className="aliases">
