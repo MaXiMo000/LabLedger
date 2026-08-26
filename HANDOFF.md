@@ -544,11 +544,12 @@ structurally sound and in the right unit.
 
 ### 6. Polish that is worth the time
 
-- **Empty states with a next action.** "0 learned mappings" explains itself well
-  but offers nothing to do.
-- **The upload screen does not say what happens next.** A dropped file goes
-  `queued → extracting → mapping → needs_review`, and only the last one is
-  actionable. Say so on the screen rather than in status labels.
+- ~~**Empty states with a next action.**~~ Done. The last one without a door
+  was `/app/review/learned`, which explained itself and offered nothing; it now
+  links to the queue the rules come from.
+- ~~**The upload screen does not say what happens next.**~~ Already done when
+  this was re-read. Each file carries its own stage, and once anything resolves
+  the screen offers "See your results" and "Confirm N uncertain results".
 - ~~**Keyboard path through the review queue.**~~ Done. `j`/`k` move a cursor,
   `1`–`9` choose a candidate, `Enter` confirms, `x` rejects, `/` reaches the
   search field and `Escape` leaves it. There is no skip key: moving the cursor
@@ -579,8 +580,21 @@ structurally sound and in the right unit.
   `alias_written: false` and means it — the one counter whose job is to make
   convergence visible rather than claimed was overstating it. And a queue of
   one read "1 result need you".
-- **`prefers-reduced-motion`.** The cascade scene animates unconditionally.
-- **A real 404 route.** Unknown `/app/*` paths currently render the shell empty.
+- ~~**`prefers-reduced-motion`.**~~ Already handled when this was re-read:
+  `CascadeScene.jsx` reads `matchMedia` before it animates, and `tokens.css`
+  carries the global rule. The entry was stale, not outstanding.
+- ~~**A real 404 route.**~~ Done — **and the diagnosis here was wrong**, which
+  is worth keeping. Unknown `/app/*` paths did not render the shell empty. They
+  never reached the shell at all: with no child matching, `/app` does not match
+  either, so the *top-level* `*` caught them and redirected to the marketing
+  page. A signed-in user who mistyped a URL was dropped out of the app onto the
+  landing page, which is indistinguishable from having been signed out — on a
+  screen holding clinical data, the one thing it must not look like.
+
+  Measured both ways: before, `/app/typo` ended at `/` showing the hero; after,
+  it stays at `/app/typo` inside the shell and says so. The catch-all is a
+  child of `/app` and inside the guard, deliberately — bouncing anywhere would
+  reproduce the bug it fixes.
 
 ### Deliberately still not in scope
 

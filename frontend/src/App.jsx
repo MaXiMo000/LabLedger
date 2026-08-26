@@ -2,6 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, lazy } from "react";
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom";
 import AppShell from "./app/AppShell.jsx";
+// Static, unlike the screens below: this one is a heading and a link, and
+// making it a chunk would mean a network round trip to tell somebody their
+// URL is wrong — on the one path where the network may be why they are here.
+import NotFound from "./screens/NotFound.jsx";
 import { AuthProvider, useAuth } from "./auth/AuthContext.jsx";
 import { PatientProvider } from "./patients/PatientContext.jsx";
 import Hero from "./sections/Hero.jsx";
@@ -110,6 +114,15 @@ export default function App() {
               <Route path="review/learned" element={<Aliases />} />
                 <Route path="record" element={<Record />} />
               <Route path="security" element={<Security />} />
+              {/* Inside the shell, not outside it. The top-level `*` below
+                  never sees `/app/typo`: that path matches this route, whose
+                  outlet then has no child to render, so the shell painted its
+                  nav and its patient switcher around an empty column and
+                  called it a page. Signed in, apparently fine, nothing there.
+                  A wrong URL should say so — and it must stay inside the
+                  guard, because bouncing to the marketing page would read as
+                  having been signed out. */}
+              <Route path="*" element={<NotFound />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
