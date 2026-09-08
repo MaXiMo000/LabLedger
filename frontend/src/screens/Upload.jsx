@@ -109,9 +109,10 @@ export default function Upload() {
       </header>
 
       <p className="upload__lede">
-        Drop the PDFs your lab gave you. LabLedger reads them here — the file is
-        encrypted before it is stored, and nothing but the test name, unit and
-        specimen ever leaves this machine.
+        Drop the PDFs your lab gave you. LabLedger reads them on this
+        deployment — the file is encrypted before it is stored, and nothing
+        but a test's name, unit and specimen ever leaves it, only to resolve
+        a match. Your identity, dates and values never do.
       </p>
 
       {/* The label is the drop target, so keyboard and pointer reach the same
