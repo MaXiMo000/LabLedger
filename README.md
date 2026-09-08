@@ -268,7 +268,3 @@ the interface should ever suggest otherwise.
 ## Reading further
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the pieces fit and why
-- [PLAN-CLINICAL.md](PLAN-CLINICAL.md) — the phase plan, including what was
-  deliberately not built
-- [HANDOFF.md](HANDOFF.md) — decisions that must not be re-litigated, and the
-  traps that cost real time

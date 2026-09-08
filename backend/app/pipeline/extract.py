@@ -5,7 +5,9 @@ PDFs never reach.
 
     1. pdfplumber.extract_tables()   ruled tables (Quest, LabCorp digital reports)
     2. text layer + token classifier borderless layouts (hospital portals)
-    3. OCR                           not implemented; see PLAN.md phase 9
+    3. OCR                           not implemented -- a scanned/image-only
+                                      PDF has no text layer for either stage
+                                      above to read
 
 Why a token *classifier* and not a positional regex: column order is not stable
 across labs. Quest prints  NAME  VALUE  FLAG  UNIT  REF, LabCorp prints

@@ -1,6 +1,7 @@
 # LabLedger backend
 
-FastAPI + MongoDB (Beanie) + Redis (arq). Design rationale lives in [../PLAN.md](../PLAN.md).
+FastAPI + MongoDB (Beanie) + Redis (arq). Design rationale lives in
+[../ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## Run
 

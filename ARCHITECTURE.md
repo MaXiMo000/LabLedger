@@ -1,8 +1,7 @@
 # How LabLedger works
 
-A walkthrough of the whole system, from dropping a PDF to seeing a trend line.
-[PLAN.md](PLAN.md) has the original design rationale; this is what actually got
-built and why each piece behaves the way it does.
+A walkthrough of the whole system, from dropping a PDF to seeing a trend line —
+what actually got built and why each piece behaves the way it does.
 
 ---
 
