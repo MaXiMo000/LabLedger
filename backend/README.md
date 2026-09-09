@@ -138,5 +138,16 @@ bucket. The LOINC table is copied into `labledger_test` once per run; without
 it the cascade matches nothing and mapping assertions pass for the wrong reason.
 
 `tests/fixtures/*.pdf` are synthetic, carrying the same analytes in **opposite
-column orders** — that is what pins the extractor's order-independence. Drop
-real de-identified reports alongside them and extend `test_extract.py`.
+column orders** — that is what pins the extractor's order-independence.
+
+`tests/fixtures/real_world/` is the other half: six PDFs downloaded from
+Quest's and LabCorp's own public sample-report pages (fictional patient data,
+published by the labs themselves for exactly this purpose — see
+`PROVENANCE.md` there). Real layout is messier than two hand-built fixtures:
+single-space column gaps, a below-detection-limit result printed in the same
+shape as a reference range, a flag word glued to its value with one space
+instead of a column gap. `test_real_world.py` runs the extractor against all
+six and pins the current measured coverage (100% of rows get a value, 74%
+a flag, 68% a unit, 40% a reference range — the range gap is mostly a
+"Class 0/III" severity column with no number in it to extract) so it
+regresses loudly if a future change quietly breaks real-world parsing again.

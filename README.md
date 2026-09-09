@@ -215,8 +215,10 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-387 tests. They run against a real MongoDB (`labledger_test`) rather than
-mocks, because the things worth testing here are queries and indexes.
+394 tests. They run against a real MongoDB (`labledger_test`) rather than
+mocks, because the things worth testing here are queries and indexes —
+`test_extract.py`, `test_real_world.py` and `test_totp_vectors.py` are the
+exceptions, calling pure functions directly with no database needed.
 
 The suite takes around twenty minutes against a remote Atlas cluster, and
 **cannot be parallelised on a free tier** — each `pytest-xdist` worker needs

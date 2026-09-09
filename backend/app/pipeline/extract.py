@@ -62,13 +62,14 @@ class ExtractResult:
 # token shapes
 # --------------------------------------------------------------------------
 
-RE_RANGE = re.compile(
-    r"^(?:"
-    r"[\d.]+\s*[-–—]\s*[\d.]+"          # 24-336, 0.4 - 4.5
-    r"|[<>≤≥]\s*[\d.]+"                  # <150, >=40
-    r"|[\d.]+\s*[-–—]\s*$"               # open-ended
-    r")$"
-)
+# Dash-form ranges are unambiguous -- a value token never contains a dash
+# between two numbers. A "<0.7"/">40" token is not: real labs print that
+# exact shape for a below/above-detection-limit *result* too ("FSH <0.7",
+# measured on a real Quest report), so it is only a reference range once a
+# value already exists on the row; see the ref-vs-value split below.
+RE_RANGE_DASH = re.compile(r"^(?:[\d.]+\s*[-–—]\s*[\d.]+|[\d.]+\s*[-–—]\s*)$")
+RE_RANGE_CMP = re.compile(r"^[<>≤≥]\s*[\d.]+$")
+RE_RANGE = re.compile(f"(?:{RE_RANGE_DASH.pattern}|{RE_RANGE_CMP.pattern})")
 RE_NUMBER = re.compile(r"^[<>≤≥]?\s*-?[\d,]+\.?\d*$")
 RE_FLAG = re.compile(r"^(H|L|HH|LL|A|AB|N|HIGH|LOW|ABNORMAL|CRITICAL)$", re.IGNORECASE)
 # Units are short and made of letter/slash/percent/micro symbols. Deliberately
@@ -81,6 +82,11 @@ QUALITATIVE = {
     "NOT DETECTED", "DETECTED", "NORMAL", "ABNORMAL", "TRACE", "NONE SEEN",
     "CLEAR", "YELLOW", "AMBER", "STRAW", "CLOUDY", "TURBID", "FEW", "MANY",
     "RARE", "MODERATE", "OCCASIONAL", "INDETERMINATE", "EQUIVOCAL", "PENDING",
+    # Real Quest reporting conventions -- measured on a real differential
+    # panel, where a component that isn't flagged still needs a printed
+    # value: "DNR" (did not resolve/report) and "NOT APPLICABLE" show up
+    # in place of a number, not as noise or as the flag column.
+    "DNR", "NOT APPLICABLE",
 }
 
 SPECIMEN_WORDS = {
@@ -95,9 +101,9 @@ SPECIMEN_WORDS = {
 RE_NOISE = re.compile(
     r"^\s*(page \d|patient|name\s*:|dob|date of birth|mrn|accession|specimen id"
     r"|ordering|physician|provider|client|account|report(ed)?\s*(date|:)"
-    r"|collected|received|printed|fasting|comment|note|performed at|final|test\s+name"
+    r"|collected|received|printed|fasting|comment|note|performed(?:\s+at)?|final|test\s+name"
     r"|reference|result\s+(range|units)|©|copyright|all rights reserved|end of report"
-    r"|this test|methodology|analyte)\b",
+    r"|this test|methodology|analyte|class description|please note)\b",
     re.IGNORECASE,
 )
 
@@ -157,12 +163,49 @@ def classify_tokens(tokens: list[str]) -> tuple[str | None, str | None, str | No
         t = tok.strip()
         if not t:
             continue
-        if ref is None and RE_RANGE.match(t):
+        # A tight real-world column sometimes prints "65-99 mg/dL" as one
+        # visual field (single space, not the double-space gap the
+        # tokenizer splits columns on) -- measured on a real Quest report.
+        # Split range from unit before the whole-token RE_RANGE check,
+        # which would otherwise never match the trailing unit text.
+        if ref is None and " " in t:
+            left, _, right = t.rpartition(" ")
+            if (RE_RANGE.match(left) and not (RE_RANGE_CMP.match(left) and value is None)
+                    and RE_UNIT.match(right) and UNIT_HINT.search(right)):
+                ref = left
+                if unit is None:
+                    unit = right
+                continue
+        # A dash-form range is claimed unconditionally, but a "<0.7"/">40"
+        # token is left for the value check below when no value exists yet
+        # -- see the RE_RANGE_CMP comment above.
+        if ref is None and RE_RANGE.match(t) and not (RE_RANGE_CMP.match(t) and value is None):
             ref = t
             continue
         if flag is None and RE_FLAG.match(t):
             flag = t.upper()
             continue
+        # "NORMAL" is ambiguous on its own: Quest prints it as a flag beside
+        # a numeric result ("85 NORMAL 65-99"), measured on a real Quest
+        # report -- but it is also a genuine qualitative result by itself
+        # ("PAP SMEAR ... NORMAL"), which is why it is in QUALITATIVE too.
+        # Once a value already exists, a later "NORMAL" can only be
+        # redundant with it, never the result itself -- that resolves the
+        # ambiguity a fixed word list on its own cannot.
+        if flag is None and value is not None and t.upper() == "NORMAL":
+            flag = "NORMAL"
+            continue
+        # Same single-space glue as the range/unit case above, on the
+        # value/flag column instead: "2.50 Abnormal" -- measured on a real
+        # allergy-panel report where the flag word sits one space after the
+        # number rather than behind its own column gap.
+        if value is None and " " in t:
+            left, _, right = t.partition(" ")
+            if RE_NUMBER.match(left) and RE_FLAG.match(right):
+                value = left.replace(",", "")
+                if flag is None:
+                    flag = right.upper()
+                continue
         if value is None and RE_NUMBER.match(t.replace(" ", "")):
             value = t.replace(",", "").replace(" ", "")
             continue
