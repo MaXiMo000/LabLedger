@@ -321,3 +321,17 @@ cd backend && .venv/bin/python scripts/make_sample_reports.py
 Six reports, three labs, three years, one fictional person. Ferritin falls from
 96 to 18 ng/mL across them, and one lab prints it as `FERRTN SER` in µg/L — so
 you can watch names and units reconcile onto a single line.
+
+### What's unverified
+
+The Provenance side panel's mobile layout (`Provenance.css`'s `max-width: 640px`
+rules — full-width panel, no border, the printed line wrapping instead of
+truncating) has been reviewed by reading the CSS, not by loading it with real
+data on an actual narrow viewport. This note existed in a prior session's
+`HANDOFF.md` and was lost, not resolved, when that file was deleted for being
+stale in other ways — restated here rather than left to happen again. A real
+check needs a full local stack (Mongo, a signed-in account, an uploaded and
+processed report) — worth doing deliberately with disposable local
+infrastructure and dummy secrets, not against whatever `.env` happens to point
+at, since this repository's Redis and EmailJS are shared with another
+deployment.

@@ -215,7 +215,7 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-366 tests. They run against a real MongoDB (`labledger_test`) rather than
+387 tests. They run against a real MongoDB (`labledger_test`) rather than
 mocks, because the things worth testing here are queries and indexes.
 
 The suite takes around twenty minutes against a remote Atlas cluster, and
@@ -241,6 +241,12 @@ to run against an empty LOINC table rather than letting that look like a pass.
 
 The LLM is stubbed by an autouse fixture. Opt out with `@pytest.mark.live_llm`,
 and expect a paid API call.
+
+`test_totp_vectors.py` needs neither Mongo nor network — it checks the
+hand-rolled TOTP implementation against RFC 6238's and RFC 4226's own
+published test vectors, independent of `test_mfa.py`'s behavioural tests
+(which generate a code and verify it with the same function, proving the two
+agree with each other, not that either is correct against the standard).
 
 ---
 
