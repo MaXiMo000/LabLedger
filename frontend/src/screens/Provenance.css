@@ -219,4 +219,17 @@
      still the point of the screen. */
   .printed__line { grid-template-columns: 1fr auto; row-gap: var(--s1); }
   .printed__name { grid-column: 1 / -1; white-space: normal; }
+
+  /* Same reasoning applies to the source filename in the footer -- it was
+     still hard-truncating here (found live, on a real narrow viewport: a
+     PDF's own name is part of the evidence chain, and this row has no
+     runway to shorten it into instead of hiding half of it). break-all
+     rather than plain wrapping: a filename has no spaces to wrap on. */
+  .prov__foot { flex-wrap: wrap; }
+  .prov__file {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-all;
+  }
 }

@@ -22,7 +22,7 @@ const SEX_OPTIONS = [
  * mark — since it is the most important word on the page.
  */
 export default function PatientSwitcher() {
-  const { patients, active, select } = usePatient();
+  const { patients, active, select, loading } = usePatient();
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ display_name: "", dob: "", sex_at_birth: "" });
@@ -59,45 +59,60 @@ export default function PatientSwitcher() {
     onError: (err) => setError(messageFor(err)),
   });
 
-  if (!active) return null;
+  // Still resolving the account's record list -- render nothing rather than
+  // flash the empty-state button for a moment before the real one appears.
+  if (loading) return null;
 
   return (
     <div className="psw" ref={wrap}>
-      <button
-        className="psw__current"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
-        <span className="psw__label eyebrow">Record</span>
-        <span className="psw__name">{active.display_name}</span>
-        <span className="psw__caret" aria-hidden="true">{open ? "▴" : "▾"}</span>
-      </button>
-
-      {open && (
-        <div className="psw__menu">
-          <ul className="psw__list" role="listbox" aria-label="Choose a record">
-            {patients.map((p) => (
-              <li key={p.id}>
-                <button
-                  role="option"
-                  aria-selected={p.id === active.id}
-                  className={`psw__item ${p.id === active.id ? "psw__item--on" : ""}`}
-                  onClick={() => { select(p.id); setOpen(false); }}
-                >
-                  <span className="psw__item-name">{p.display_name}</span>
-                  <span className="psw__item-meta num">
-                    {p.dob ? `b. ${p.dob}` : "no date of birth"} · {p.role}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <button className="psw__new" onClick={() => { setAdding(true); setOpen(false); }}>
-            Add a record
+      {/* A brand-new account has zero records. The dropdown below has
+          nothing to switch between yet, but "Add a record" must still be
+          reachable -- it is the only way a first record ever gets created,
+          and hiding it here left a fresh signup with no way to leave the
+          "Loading…" state any screen shows once there's nothing to select. */}
+      {!active ? (
+        <button className="psw__new psw__new--first" onClick={() => setAdding(true)}>
+          Add a record
+        </button>
+      ) : (
+        <>
+          <button
+            className="psw__current"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+          >
+            <span className="psw__label eyebrow">Record</span>
+            <span className="psw__name">{active.display_name}</span>
+            <span className="psw__caret" aria-hidden="true">{open ? "▴" : "▾"}</span>
           </button>
-        </div>
+
+          {open && (
+            <div className="psw__menu">
+              <ul className="psw__list" role="listbox" aria-label="Choose a record">
+                {patients.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      role="option"
+                      aria-selected={p.id === active.id}
+                      className={`psw__item ${p.id === active.id ? "psw__item--on" : ""}`}
+                      onClick={() => { select(p.id); setOpen(false); }}
+                    >
+                      <span className="psw__item-name">{p.display_name}</span>
+                      <span className="psw__item-meta num">
+                        {p.dob ? `b. ${p.dob}` : "no date of birth"} · {p.role}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <button className="psw__new" onClick={() => { setAdding(true); setOpen(false); }}>
+                Add a record
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {adding && (

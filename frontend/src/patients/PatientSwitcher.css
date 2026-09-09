@@ -62,6 +62,23 @@
 }
 .psw__new:hover { background: var(--paper-sunk); }
 
+/* Standalone in the header, not inside .psw__menu -- a brand-new account
+   with no record yet has nothing to open a dropdown onto, so this needs
+   .psw__current's own button chrome rather than the menu row's plain,
+   full-bleed text-link look. */
+.psw__new--first {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  font-weight: 500;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.psw__new--first:hover { border-color: var(--ink-faint); background: var(--paper-raised); }
+
 .psw__add { padding: var(--s4); display: grid; gap: var(--s3); }
 .psw__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
 .psw__why { font-size: var(--text-caption); color: var(--ink-faint); }
