@@ -16,6 +16,7 @@ from app.audit import set_request_context
 from app.config import settings
 from app.db import close_db, init_db
 from app.routers import audit, auth, documents, observations, patients, review
+from app.tidewatch_metrics import TidewatchMetrics
 from app.worker import process_document
 
 logging.basicConfig(level=settings.log_level.upper())
@@ -128,6 +129,13 @@ async def security_headers(request, call_next):
     if settings.is_prod:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
+
+
+# Tidewatch dashboard: request timing + GET /tidewatch/metrics (aggregates only, Bearer token).
+# Added last, so it is the outermost layer: the dashboard's polls never reach CORS, the session
+# middleware or the rate limiter, and the timing covers everything below it. No token, no route.
+if settings.tidewatch_token:
+    app.add_middleware(TidewatchMetrics, token=settings.tidewatch_token)
 
 
 # HEAD as well as GET. Uptime monitors send HEAD by default — it is the

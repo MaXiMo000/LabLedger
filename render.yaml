@@ -118,6 +118,10 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: info
+      # Optional: turns on GET /tidewatch/metrics (aggregates only) for the Tidewatch
+      # dashboard. Unset = the route does not exist. See backend/app/tidewatch_metrics.py.
+      - key: TIDEWATCH_METRICS_TOKEN
+        sync: false
 
   # ---- worker ---------------------------------------------------------------
   # There isn't one. Render has no Free instance type for `type: worker` — only

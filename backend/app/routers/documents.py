@@ -15,6 +15,7 @@ from app.models.observation import Observation
 from app.models.user import User
 from app.security import decrypt_field, encrypt_field
 from app.throttle import guard_queue_depth, guard_storage, storage_used
+from app.tidewatch_metrics import track
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -148,7 +149,8 @@ async def upload(
         doc.error = "Worker unavailable; retry processing later"
         await doc.save()
     else:
-        await pool.enqueue_job("process_document", str(doc.id))
+        async with track("queue", "queue"):
+            await pool.enqueue_job("process_document", str(doc.id))
     return DocumentOut.of(doc)
 
 
@@ -222,7 +224,8 @@ async def reprocess(request: Request, document_id: str, user: User = Depends(cur
     await doc.save()
     await record("reprocess", "document", doc.id, patient_id=doc.patient_id)
     if pool := request.app.state.arq:
-        await pool.enqueue_job("process_document", str(doc.id))
+        async with track("queue", "queue"):
+            await pool.enqueue_job("process_document", str(doc.id))
     return DocumentOut.of(doc)
 
 

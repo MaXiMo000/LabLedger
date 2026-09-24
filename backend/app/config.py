@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,6 +49,11 @@ class Settings(BaseSettings):
 
     llm_confidence_floor: float = 0.80
     log_level: str = "info"
+    # Tidewatch dashboard (github.com/MaXiMo000/tidewatch): when set, GET /tidewatch/metrics
+    # serves aggregate health numbers (request rate, 5xx rate, p95; the same for MongoDB, the
+    # queue and Gemini) to whoever holds this token. Unset = the route does not exist. Never
+    # carries PHI, URLs, routes or user ids - see app/tidewatch_metrics.py.
+    tidewatch_metrics_token: SecretStr | None = None
 
     max_upload_bytes: int = 25 * 1024 * 1024
     # Total stored PDF bytes one account may hold. 25 MB a file with no ceiling
@@ -81,6 +87,12 @@ class Settings(BaseSettings):
     def is_test(self) -> bool:
         """True under pytest. Rate limits are disabled so tests do not share one IP bucket."""
         return self.env == "test"
+
+    @property
+    def tidewatch_token(self) -> str:
+        """The Tidewatch metrics token, or "" when the endpoint is off."""
+        token = self.tidewatch_metrics_token
+        return token.get_secret_value() if token else ""
 
     @property
     def is_prod(self) -> bool:

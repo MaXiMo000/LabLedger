@@ -21,6 +21,7 @@ import re
 import httpx
 
 from app.config import settings
+from app.tidewatch_metrics import track
 
 logger = logging.getLogger("labledger.llm")
 
@@ -71,7 +72,8 @@ async def adjudicate(
     )
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        # Timed for the Tidewatch "ai" island (duration and failure only, never content).
+        async with httpx.AsyncClient(timeout=timeout) as client, track("ai", "service") as call:
             r = await client.post(
                 ENDPOINT.format(model=model),
                 params={"key": settings.gemini_api_key},
@@ -81,6 +83,8 @@ async def adjudicate(
                     "generationConfig": {"temperature": 0, "maxOutputTokens": 2000},
                 },
             )
+            if r.status_code >= 500:
+                call.fail()
     except (TimeoutError, httpx.HTTPError) as exc:
         raise LLMUnavailableError(f"{type(exc).__name__}") from exc
 
