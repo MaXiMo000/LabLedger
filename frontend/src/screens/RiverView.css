@@ -1,0 +1,88 @@
+/* Every test on one timeline. Same grammar as the panel small multiples
+   (PanelTrends.css): one x scale, nothing shared between rows but time. */
+
+.river { padding: var(--s2) 0 var(--s5); }
+
+.river__note,
+.river__pairs-note {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  max-width: 62ch;
+  margin-bottom: var(--s4);
+}
+
+.river__scrubber {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 2fr) 5rem;
+  gap: var(--s4);
+  align-items: center;
+  margin-bottom: var(--s3);
+}
+.river__scrubber-label { font-size: var(--text-small); color: var(--ink-muted); }
+.river__scrubber input { width: 100%; accent-color: var(--ink); }
+
+.river__rows { list-style: none; margin: 0; padding: 0; }
+
+.river__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 2fr) 5rem;
+  align-items: center;
+  gap: var(--s4);
+  padding-block: var(--s1);
+  border-bottom: 1px solid var(--rule);
+  transition: background 120ms ease;
+}
+.river__row--hl { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+
+.river__name {
+  font-size: var(--text-small);
+  color: var(--ink);
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.river__unit { font-family: var(--font-mono); font-size: var(--text-caption); color: var(--ink-faint); }
+
+.river__plot { width: 100%; height: 54px; display: block; overflow: visible; }
+.river__band { fill: color-mix(in srgb, var(--ink) 7%, transparent); }
+.river__ribbon { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.river__scrub { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; }
+
+.river__value { text-align: right; font-size: var(--text-small); white-space: nowrap; }
+
+.river__axis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 2fr) 5rem;
+  gap: var(--s4);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  padding-top: var(--s2);
+}
+.river__axis-dates { display: flex; justify-content: space-between; }
+
+.river__pairs { margin-top: var(--s5); }
+.river__pairs-h { font-size: var(--text-small); margin-bottom: var(--s2); }
+.river__pairs ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.river__pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s3);
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+.river__pair[aria-pressed="true"] { border-color: var(--ink); }
+.river__pair:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.river__pair-n { color: var(--ink-faint); font-size: var(--text-caption); }
+
+.river__toggle { margin: var(--s3) 0 var(--s2); }
