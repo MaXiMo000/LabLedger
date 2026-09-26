@@ -6,6 +6,7 @@ import { usePatient } from "../patients/PatientContext";
 import IntervalRail from "../components/IntervalRail";
 import PanelTrends from "./PanelTrends";
 import Provenance from "./Provenance";
+import RiverView from "./RiverView";
 import TrendChart from "./TrendChart";
 import "./Trends.css";
 
@@ -283,6 +284,7 @@ export default function Trends() {
   const [openCode, setOpenCode] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
   const [inspecting, setInspecting] = useState(null);
+  const [river, setRiver] = useState(false);
   const { activeId } = usePatient();
 
   const { data: panels, isPending, error } = useQuery({
@@ -340,6 +342,17 @@ export default function Trends() {
           </div>
         </dl>
       </header>
+
+      <div className="river__toggle">
+        <button
+          className="pgroup__chart"
+          aria-expanded={river}
+          onClick={() => setRiver(!river)}
+        >
+          {river ? "Hide the timeline" : "Every test on one timeline"}
+        </button>
+      </div>
+      {river && <RiverView patientId={activeId} />}
 
       <div className="panels__head" aria-hidden="true">
         <span>Test</span>

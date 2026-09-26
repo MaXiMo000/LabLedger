@@ -523,6 +523,9 @@ def _critical_out(loinc: str, o: Observation) -> CriticalOut | None:
     return CriticalOut(**vars(crit)) if crit else None
 
 
+ALL_KEY = "all"
+
+
 @router.get("/{patient_id}/panel-trends", response_model=PanelTrends)
 async def panel_trends(
     patient_id: str,
@@ -551,10 +554,15 @@ async def panel_trends(
     that happened to convert is the silent-omission failure the whole pipeline
     is built to avoid.
     """
-    key, label = next(
-        ((k, lbl) for k, lbl, _ in PANELS if k == panel),
-        (OTHER_KEY, OTHER_LABEL) if panel == OTHER_KEY else (None, None),
-    )
+    if panel == ALL_KEY:
+        # Every analyte on the one time axis -- the river view. Same tracks,
+        # same `_charted` rules, only the panel filter is dropped.
+        key, label = ALL_KEY, "All tests"
+    else:
+        key, label = next(
+            ((k, lbl) for k, lbl, _ in PANELS if k == panel),
+            (OTHER_KEY, OTHER_LABEL) if panel == OTHER_KEY else (None, None),
+        )
     if key is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No such panel")
 
@@ -565,7 +573,7 @@ async def panel_trends(
 
     by_code: dict[str, list[Observation]] = {}
     for o in rows:
-        if panel_for(o.loinc_code)[0] == key:
+        if key == ALL_KEY or panel_for(o.loinc_code)[0] == key:
             by_code.setdefault(o.loinc_code, []).append(o)
 
     tracks = []

@@ -126,3 +126,23 @@ async def test_panel_trends_needs_a_grant(client, account):
 
     r = await client.get(f"/api/observations/{pid}/panel-trends?panel=cbc", headers=h2)
     assert r.status_code == 404  # 404, never 403 — see access.py
+
+
+async def test_all_returns_every_analyte_across_panels(client, account):
+    """The river view: every analyte on one axis, through the same `_charted`
+    rules as each panel, so the two can't disagree about a point."""
+    h, pid = await loaded(client, account)
+    everything = (await client.get(f"/api/observations/{pid}/panel-trends?panel=all",
+                                   headers=h)).json()
+    assert everything["panel"] == "all"
+    assert everything["panel_label"] == "All tests"
+
+    by_panel = set()
+    for panel in ("metabolic", "cbc", "lipids"):
+        d = (await client.get(f"/api/observations/{pid}/panel-trends?panel={panel}",
+                              headers=h)).json()
+        by_panel |= {t["loinc_code"] for t in d["tracks"]}
+        for t in d["tracks"]:
+            same = next(x for x in everything["tracks"] if x["loinc_code"] == t["loinc_code"])
+            assert same["points"] == t["points"]
+    assert by_panel <= {t["loinc_code"] for t in everything["tracks"]}
