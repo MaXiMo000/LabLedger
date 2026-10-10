@@ -5,3 +5,4 @@ __pycache__/
 .env.local
 data/loinc*.csv
 .pytest_cache/
+results.xml

@@ -70,7 +70,7 @@ jobs:
         run: |
           python - <<'PY'
           import sys, xml.etree.ElementTree as ET
-          FLOOR = 360
+          FLOOR = 400
           try:
               s = ET.parse("results.xml").getroot()
           except Exception as e:
@@ -102,6 +102,48 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+
+  demo:
+    # `docker compose up` is the first thing the README asks anyone to run, so
+    # it is run here: build, seed, sign in through the proxy and pull the
+    # export. Six reports of twenty rows each, plus the patient.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - run: docker compose up -d --build
+      - name: Sign in and export
+        run: |
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/api/health >/dev/null && break
+            sleep 2
+          done
+          python3 - <<'PY'
+          import json, urllib.request
+
+          BASE = "http://localhost:8080"
+
+          def call(path, body=None, token=None):
+              headers = {"Content-Type": "application/json"}
+              if token:
+                  headers["Authorization"] = f"Bearer {token}"
+              req = urllib.request.Request(
+                  BASE + path, headers=headers,
+                  data=json.dumps(body).encode() if body else None)
+              return urllib.request.urlopen(req, timeout=30).read()
+
+          token = json.loads(call("/api/auth/login", {
+              "email": "demo@example.com", "password": "labledger-demo-only"}))["access_token"]
+          patient = json.loads(call("/api/patients", token=token))[0]["id"]
+          bundle = json.loads(call(f"/api/observations/{patient}/fhir", token=token))
+          entries = len(bundle["entry"])
+          coded = sum("coding" in e["resource"].get("code", {}) for e in bundle["entry"])
+          print(f"{entries} entries, {coded} with a LOINC code")
+          assert entries == 121, entries
+          assert coded >= 90, coded
+          assert b'id="root"' in call("/privacy")
+          PY
+      - if: failure()
+        run: docker compose logs --no-color --tail 80
 
   carabiner:
     # The scanner its author wrote, gating the repo that handles lab reports.

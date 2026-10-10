@@ -1,0 +1,84 @@
+# The whole system on one machine, with sample data:
+#
+#     docker compose up --build
+#
+# then open http://localhost:8080 and sign in with the account the `init`
+# service prints. Everything in it is synthetic -- six generated reports for a
+# person who does not exist.
+#
+# This is a demonstration, not a deployment. It listens on localhost only, the
+# signing and encryption keys are generated on first start and kept in a
+# volume, and there is no LLM key, so the rows the deterministic stages cannot
+# settle wait in the review queue -- which is the behaviour worth seeing.
+# `docker compose down -v` removes it, data and keys included.
+
+x-backend: &backend
+  build: ./backend
+  environment:
+    ENV: development
+    MONGO_URI: mongodb://mongo:27017
+    MONGO_DB_NAME: labledger
+    REDIS_URL: redis://redis:6379
+    FRONTEND_URL: http://localhost:8080
+    BACKEND_URL: http://localhost:8080
+  volumes:
+    - secrets:/secrets
+  # The keys live in the volume, not in this file or the image.
+  entrypoint: ["sh", "-c", "set -a; . /secrets/demo.env; set +a; exec \"$$@\"", "--"]
+
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping:1}).ok"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+
+  # Runs once: makes the keys, loads the LOINC table, creates the demo account
+  # and reads the six sample reports through the real pipeline.
+  init:
+    <<: *backend
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        [ -f /secrets/demo.env ] || python scripts/seed_demo.py --make-keys > /secrets/demo.env
+        set -a; . /secrets/demo.env; set +a
+        python scripts/seed_demo.py
+
+  api:
+    <<: *backend
+    # Stated here because overriding the entrypoint discards the image's CMD.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  worker:
+    <<: *backend
+    command: ["arq", "app.worker.WorkerSettings"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+
+volumes:
+  mongo:
+  secrets:
