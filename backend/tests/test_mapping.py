@@ -190,3 +190,43 @@ async def test_llm_unavailable_when_no_key(monkeypatch):
     monkeypatch.setattr(llm.settings, "gemini_api_key", None)
     with pytest.raises(llm.LLMUnavailableError):
         await llm.adjudicate("X", None, None, CANDIDATES)
+
+
+# --- real reports ----------------------------------------------------------
+
+# Every row of five real Quest/LabCorp sample reports (tests/fixtures/
+# real_world/expected.json), mapped by hand-checked code. Before the curated
+# stage these went wrong, not just unmapped: creatinine to the urine code,
+# "NEUTROPHILS 63.4 %" to the absolute-count code, HbA1c in % to a mass
+# concentration, "WEIGHT" to the weight of a kidney stone.
+REAL_ROWS = [
+    ("CREATININE", "mg/dL", "2160-0"),
+    ("NEUTROPHILS", "%", "770-8"),
+    ("ABSOLUTE NEUTROPHILS", "cells/uL", "751-8"),
+    ("LYMPHOCYTES", "%", "736-9"),
+    ("Hemoglobin A1c", "% of total Hgb", "4548-4"),
+    ("ABSOLUTE BLASTS", None, "30376-8"),       # a "DNR" row prints no unit
+    ("UREA NITROGEN (BUN)", "mg/dL", "3094-0"),
+    ("HDL Cholesterol", "mg/dL", "2085-9"),
+    ("Cholesterol/HDL Ratio (Calculated)", None, "9830-1"),
+    ("SARS-CoV-2, NAA", None, "94309-2"),
+    ("E001-IgE Cat Dander", "kU/L", "6833-8"),
+]
+
+
+@pytest.mark.parametrize("name,unit,code", REAL_ROWS)
+async def test_real_report_rows_map_to_the_checked_code(loinc_db, name, unit, code):
+    result = await resolve(name, unit)
+    assert (result.stage, result.loinc_code) == ("curated", code)
+
+
+async def test_a_differential_without_a_unit_is_not_guessed(loinc_db):
+    # "NEUTROPHILS" is a % or a count; with no unit, the curated stage
+    # declines and leaves it to the cascade.
+    result = await resolve("NEUTROPHILS", None)
+    assert result.stage != "curated"
+
+
+async def test_vital_signs_are_left_for_review_not_mapped_absurdly(loinc_db):
+    result = await resolve("WEIGHT", "lbs")
+    assert (result.stage, result.loinc_code) == ("unmapped", None)

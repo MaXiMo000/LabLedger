@@ -22,6 +22,10 @@ const STAGE_STORY = {
     title: "Matched a name you confirmed",
     body: "You have confirmed this printed name before, so it resolved by lookup — no matching, no model.",
   },
+  curated: {
+    title: "Matched a common lab test",
+    body: "This printed name is one of the tests reports print most, with its code checked in the LOINC table ahead of time. Where a name means two tests — a differential as a percentage or a count — the printed unit decided.",
+  },
   exact: {
     title: "Matched a LOINC name exactly",
     body: "The printed name is one of this code's own names, character for character after normalising case and punctuation.",

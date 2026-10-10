@@ -49,3 +49,21 @@ def test_every_row_across_the_corpus_has_a_value():
             total += 1
             assert row.raw_value is not None, f"{pdf.name}: {row}"
     assert total >= 80
+
+
+def test_every_value_unit_and_range_matches_the_printed_report():
+    """Ground truth: each row of five real sample reports, checked by hand
+    against the PDF. Exact, not counts -- a count-based test passed while a
+    positive SARS-CoV-2 result read as "NOT DETECTED" (the reference column
+    taken for the value) and a ratio's value read as its lab-site code "01"."""
+    import json
+    expected = json.loads((FIXTURES / "expected.json").read_text(encoding="utf-8"))
+    expected.pop("_note")
+    wrong = []
+    for name, rows in expected.items():
+        got = [[r.raw_name, r.raw_value, r.raw_unit, r.raw_ref_range, r.raw_flag]
+               for r in extract((FIXTURES / name).read_bytes()).rows]
+        for want in rows:
+            if want not in got:
+                wrong.append(f"{name}: expected {want}")
+    assert not wrong, "\n".join(wrong)

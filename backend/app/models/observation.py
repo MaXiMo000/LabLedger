@@ -9,6 +9,7 @@ from app.models.user import utcnow
 
 MappingStage = Literal[
     "alias",                 # user-confirmed lookup, conf 1.00
+    "curated",               # app/data/common_tests.py, codes checked in the table, conf 0.98
     "exact",                 # exact hit on a primary LOINC name, conf 0.95
     "related_corroborated",  # related-name hit + specimen + unit agree; always reviewed
     "narrowed_fuzzy",
