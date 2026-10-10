@@ -25,6 +25,7 @@ const Security = lazy(() => import("./screens/Security.jsx"));
 const Invite = lazy(() => import("./screens/Invite.jsx"));
 const Aliases = lazy(() => import("./screens/Aliases.jsx"));
 const ResetPassword = lazy(() => import("./screens/ResetPassword.jsx"));
+const Privacy = lazy(() => import("./screens/Privacy.jsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +95,7 @@ export default function App() {
             {/* Public: the whole point is that the invitee has no access yet. */}
             <Route path="/invite/:token" element={<Invite />} />
             <Route path="/reset/:token" element={<ResetPassword />} />
+            <Route path="/privacy" element={<Privacy />} />
 
             <Route
               path="/app"
