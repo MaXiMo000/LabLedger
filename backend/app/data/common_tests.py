@@ -37,20 +37,22 @@ TABLE: dict[str, str | dict[str, str]] = {
     "TOTAL CHOLESTEROL": "2093-3", "CHOLESTEROL TOTAL": "2093-3", "CHOLESTEROL": "2093-3",
     "HDL CHOLESTEROL": "2085-9", "HDL": "2085-9",
     "LDL CHOLESTEROL CALCULATED": "13457-7", "LDL CHOLESTEROL": "13457-7",
+    "LDL-CHOLESTEROL": "13457-7",
     "Non-HDL Cholesterol": "43396-1",
     "Cholesterol/HDL Ratio": "9830-1", "Cholesterol/HDL Ratio (Calculated)": "9830-1",
     "TRIGLYCERIDES": "2571-8",
     # glycemic
-    "HEMOGLOBIN A1C": {"percent": "4548-4"},
+    "HEMOGLOBIN A1C": {"percent": "4548-4"}, "A1C": {"percent": "4548-4"},
+    "HBA1C": {"percent": "4548-4"},
     # hormones
     "TESTOSTERONE TOTAL MS": "2986-8", "TESTOSTERONE TOTAL": "2986-8",
     "ESTRADIOL": "2243-4", "FSH": "15067-2", "LH": "10501-5",
     # CBC
     "WHITE BLOOD CELL COUNT": "6690-2", "WBC": "6690-2",
     "RED BLOOD CELL COUNT": "789-8", "RBC": "789-8",
-    "HEMOGLOBIN": "718-7", "HEMATOCRIT": "4544-3",
+    "HEMOGLOBIN": "718-7", "HGB": "718-7", "HEMATOCRIT": "4544-3", "HCT": "4544-3",
     "MCV": "787-2", "MCH": "785-6", "MCHC": "786-4", "RDW": "788-0",
-    "PLATELET COUNT": "777-3", "PLATELETS": "777-3", "MPV": "32623-1",
+    "PLATELET COUNT": "777-3", "PLATELETS": "777-3", "PLT": "777-3", "MPV": "32623-1",
     # differential: % of leukocytes, or an absolute count
     "NEUTROPHILS": {"percent": "770-8", "count": "751-8"},
     "LYMPHOCYTES": {"percent": "736-9", "count": "731-0"},

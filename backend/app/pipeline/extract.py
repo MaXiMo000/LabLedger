@@ -165,6 +165,15 @@ _OR_EQUAL = [(re.compile(r">\s*OR\s*=\s*", re.IGNORECASE), "≥"),
              (re.compile(r"<\s*OR\s*=\s*", re.IGNORECASE), "≤")]
 
 
+def _plausible_name(name: str) -> bool:
+    """Tell a test name from a stray token in the name column.
+
+    Two letters anywhere, not two in a row: "A1C" is a name. One letter is a
+    flag ("H", "L") except for potassium, which some labs print as "K".
+    """
+    return len(name) <= 60 and (name.upper() == "K" or len(re.findall(r"[A-Za-z]", name)) >= 2)
+
+
 def clean_token(tok: str) -> str:
     t = " ".join(line for line in tok.splitlines() if not _SEE_NOTE.fullmatch(line.strip()))
     t = _CALC.sub(" ", t)
@@ -288,7 +297,7 @@ def parse_line(line: str, page: int, line_no: int, specimen: str | None) -> RawR
     if not m:
         return None
     name = re.sub(r"\s+", " ", m.group("name")).strip(" .:-")
-    if not (2 <= len(name) <= 60) or not re.search(r"[A-Za-z]{2}", name):
+    if not _plausible_name(name):
         return None
 
     rest = m.group("rest")
@@ -332,7 +341,7 @@ def _rows_from_tables(pdf) -> list[RawRow]:
                 for pair in pairs:
                     name, rest = pair[0], pair[1:]
                     name = re.sub(r"\s+", " ", name).strip(" .:-")
-                    if not (2 <= len(name) <= 60) or not re.search(r"[A-Za-z]{2}", name):
+                    if not _plausible_name(name):
                         continue
                     value, unit, ref, flag = classify_tokens(rest)
                     if value is None:
