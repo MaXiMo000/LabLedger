@@ -84,6 +84,10 @@ LABS = [
     },
 ]
 
+# A person who does not exist. seed_demo.py gives the demo record the same date
+# of birth, so the age-aware reference ranges agree with the page.
+DOB = date(1984, 6, 2)
+
 VISITS = [
     (date(2023, 2, 14), 0), (date(2023, 9, 6), 1),
     (date(2024, 3, 14), 2), (date(2024, 10, 22), 3),
@@ -115,10 +119,10 @@ def build(path: Path, lab: dict, when: date, idx: int) -> None:
     y -= 18
     c.setFont("Helvetica", 8)
     for line in [
-        "Patient: SAINI, RITISH              DOB: 04/12/1996        Sex: M",
+        f"Patient: PATIENT, SAMPLE             DOB: {DOB:%m/%d/%Y}        Sex: M",
         f"MRN: SAMPLE-00417                   Accession: {lab['name'][:2].upper()}-{when:%Y%m%d}",
         f"Collected: {when:%m/%d/%Y}                Reported: {when:%m/%d/%Y}",
-        "Ordering Physician: PATEL, ANJALI MD",
+        "Ordering Physician: PHYSICIAN, SAMPLE MD",
     ]:
         c.drawString(60, y, line)
         y -= 11

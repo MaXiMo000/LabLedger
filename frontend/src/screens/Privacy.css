@@ -1,0 +1,28 @@
+.privacy { padding-block: var(--s7) var(--s9); }
+
+.privacy__mark {
+  display: inline-block;
+  margin-bottom: var(--s7);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.privacy__title { font-size: var(--text-h2); margin-block: var(--s2) var(--s4); }
+.privacy__lead { color: var(--ink-muted); max-width: 44rem; }
+
+.privacy__block {
+  margin-top: var(--s6);
+  padding-top: var(--s6);
+  border-top: 1px solid var(--rule);
+}
+.privacy__block:last-of-type { margin-bottom: var(--s6); }
+
+.privacy__h { font-size: var(--text-h3); font-weight: 500; margin-bottom: var(--s4); }
+
+.privacy__list {
+  display: grid;
+  gap: var(--s3);
+  max-width: 44rem;
+  padding-left: var(--s5);
+  list-style: disc;
+}

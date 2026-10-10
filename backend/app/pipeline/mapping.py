@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from beanie import PydanticObjectId
 from rapidfuzz import fuzz, process
 
+from app.data import common_tests
 from app.models.alias import Alias
 from app.models.loinc import LoincEntry
 
@@ -141,6 +142,24 @@ class MappingResult:
 # --------------------------------------------------------------------------
 # stage 0 - learned aliases
 # --------------------------------------------------------------------------
+
+_CURATED: dict | None = None
+
+
+def _curated(norm: str, unit: str | None) -> str | None:
+    global _CURATED
+    if _CURATED is None:
+        _CURATED = {normalize(name): code for name, code in common_tests.TABLE.items()}
+    entry = _CURATED.get(norm)
+    if entry is None or isinstance(entry, str):
+        return entry
+    if len(entry) == 1:
+        # The name alone is unambiguous ("ABSOLUTE BLASTS" is a count),
+        # including on a "DNR" row that prints no unit.
+        return next(iter(entry.values()))
+    kind = common_tests.unit_kind(unit)
+    return entry.get(kind) if kind else None
+
 
 async def _stage_alias(norm: str, specimen: str | None,
                        user_id: PydanticObjectId | None) -> Alias | None:
@@ -322,7 +341,7 @@ def should_force_review(stage: str, component: str | None) -> bool:
     LLM -- is not auto-accepted for an analyte that drives dosing, no matter
     how confident it claims to be.
     """
-    if stage in ("alias", "exact"):
+    if stage in ("alias", "curated", "exact"):
         return False
     if stage == "related_corroborated":
         return True  # associative evidence: always propose, never auto-accept
@@ -355,6 +374,23 @@ async def resolve(
             component=entry.component if entry else None,
             note=f"confirmed {alias.confirmed_count}x",
         )
+
+    # stage 0.5: the curated compendium -- after a user's own confirmed
+    # aliases, before anything fuzzy. See app/data/common_tests.py.
+    # Every curated code is a blood/serum/plasma test: "GLUCOSE" printed in a
+    # urine panel is a different test, and must not take the serum code.
+    blood = (specimen or "").upper() in ("", "SERUM", "PLASMA", "SERUM/PLASMA", "BLOOD", "WHOLE BLOOD")
+    code = _curated(norm, raw_unit) if blood else None
+    if code == "":
+        return MappingResult(stage="unmapped", candidates=[], candidates_considered=0,
+                             note="not a lab test in the LOINC table: left for review")
+    if code:
+        entry = await LoincEntry.find_one(LoincEntry.loinc_num == code)
+        if entry:
+            return MappingResult(
+                stage="curated", loinc_code=code, loinc_display=entry.long_common_name,
+                confidence=0.98, candidates_considered=1, component=entry.component,
+            )
 
     # stage 1
     primary, related = await _stage_exact(norm, systems, raw_unit)

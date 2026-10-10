@@ -1,0 +1,629 @@
+{
+ "_note": "Every row checked by hand against the PDF text: [name, value, unit, reference range, flag].",
+ "labcorp_001453_hba1c_sample.pdf": [
+  [
+   "Hemoglobin A1c",
+   "4.9",
+   "%",
+   "4.8 - 5.6",
+   null
+  ],
+  [
+   "Hemoglobin A1c",
+   "5.7",
+   "%",
+   "4.8 - 5.6",
+   "HIGH"
+  ]
+ ],
+ "labcorp_139900_covid_naa_sample.pdf": [
+  [
+   "SARS-CoV-2, NAA",
+   "NOT DETECTED",
+   null,
+   null,
+   null
+  ],
+  [
+   "SARS-CoV-2, NAA",
+   "DETECTED",
+   null,
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "SARS-CoV-2, NAA",
+   "INDETERMINATE",
+   null,
+   null,
+   "ABNORMAL"
+  ]
+ ],
+ "labcorp_607016_allergy_ige_sample.pdf": [
+  [
+   "E001-IgE Cat Dander",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E005-IgE Dog Dander",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E003-IgE Horse Dander",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E001-IgE Cat Dander",
+   "2.50",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "E094-IgE Fel d 1",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E220-IgE Fel d 2",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E228-IgE Fel d 4",
+   "1.50",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "E005-IgE Dog Dander",
+   "3.50",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "E101-IgE Can f 1",
+   "2.00",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "E102-IgE Can f 2",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E221-IgE Can f 3",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E226-IgE Can f 5",
+   "<0.10",
+   "kU/L",
+   null,
+   null
+  ],
+  [
+   "E003-IgE Horse Dander",
+   "6.00",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ],
+  [
+   "E227-IgE Equ c 1",
+   "4.00",
+   "kU/L",
+   null,
+   "ABNORMAL"
+  ]
+ ],
+ "quest_cmp_cbc_panel_sample.pdf": [
+  [
+   "GLUCOSE",
+   "85",
+   "mg/dL",
+   "65-99",
+   "NORMAL"
+  ],
+  [
+   "UREA NITROGEN (BUN)",
+   "14",
+   "mg/dL",
+   "7-25",
+   "NORMAL"
+  ],
+  [
+   "CREATININE",
+   "0.89",
+   "mg/dL",
+   "0.70-1.30",
+   "NORMAL"
+  ],
+  [
+   "EGFR",
+   "103",
+   "mL/min/1.73m2",
+   "≥60",
+   "NORMAL"
+  ],
+  [
+   "BUN/CREATININE RATIO",
+   "NOT APPLICABLE",
+   null,
+   "6-22",
+   "NORMAL"
+  ],
+  [
+   "SODIUM",
+   "135",
+   "mmol/L",
+   "135-146",
+   "NORMAL"
+  ],
+  [
+   "POTASSIUM",
+   "4.8",
+   "mmol/L",
+   "3.5-5.3",
+   "NORMAL"
+  ],
+  [
+   "CHLORIDE",
+   "104",
+   "mmol/L",
+   "98-110",
+   "NORMAL"
+  ],
+  [
+   "CARBON DIOXIDE",
+   "25",
+   "mmol/L",
+   "20-32",
+   "NORMAL"
+  ],
+  [
+   "CALCIUM",
+   "9.3",
+   "mg/dL",
+   "8.6-10.3",
+   "NORMAL"
+  ],
+  [
+   "PROTEIN, TOTAL",
+   "7.2",
+   "g/dL",
+   "6.1-8.1",
+   "NORMAL"
+  ],
+  [
+   "ALBUMIN",
+   "4.4",
+   "g/dL",
+   "3.6-5.1",
+   "NORMAL"
+  ],
+  [
+   "GLOBULIN",
+   "2.8",
+   "g/dL",
+   "1.9-3.7",
+   "NORMAL"
+  ],
+  [
+   "ALBUMIN/GLOBULIN RATIO",
+   "1.6",
+   null,
+   "1.0-2.5",
+   "NORMAL"
+  ],
+  [
+   "BILIRUBIN, TOTAL",
+   "0.6",
+   "mg/dL",
+   "0.2-1.2",
+   "NORMAL"
+  ],
+  [
+   "ALKALINE PHOSPHATASE",
+   "77",
+   "U/L",
+   "35-144",
+   "NORMAL"
+  ],
+  [
+   "AST",
+   "21",
+   "U/L",
+   "10-35",
+   "NORMAL"
+  ],
+  [
+   "ALT",
+   "20",
+   "U/L",
+   "9-46",
+   "NORMAL"
+  ],
+  [
+   "TESTOSTERONE, TOTAL, MS",
+   "1122",
+   "ng/dL",
+   "250-1100",
+   "HIGH"
+  ],
+  [
+   "ESTRADIOL",
+   "21",
+   "pg/mL",
+   "≤39",
+   "NORMAL"
+  ],
+  [
+   "FSH",
+   "<0.7",
+   "mIU/mL",
+   "1.6-8.0",
+   "LOW"
+  ],
+  [
+   "LH",
+   "<0.2",
+   "mIU/mL",
+   "1.5-9.3",
+   "LOW"
+  ],
+  [
+   "WHITE BLOOD CELL COUNT",
+   "5.1",
+   "Thousand/uL",
+   "3.8-10.8",
+   "NORMAL"
+  ],
+  [
+   "RED BLOOD CELL COUNT",
+   "5.44",
+   "Million/uL",
+   "4.20-5.80",
+   "NORMAL"
+  ],
+  [
+   "HEMOGLOBIN",
+   "16.3",
+   "g/dL",
+   "13.2-17.1",
+   "NORMAL"
+  ],
+  [
+   "HEMATOCRIT",
+   "48.5",
+   "%",
+   "38.5-50.0",
+   "NORMAL"
+  ],
+  [
+   "MCV",
+   "89.2",
+   "fL",
+   "80.0-100.0",
+   "NORMAL"
+  ],
+  [
+   "MCH",
+   "30.0",
+   "pg",
+   "27.0-33.0",
+   "NORMAL"
+  ],
+  [
+   "MCHC",
+   "33.6",
+   "g/dL",
+   "32.0-36.0",
+   "NORMAL"
+  ],
+  [
+   "RDW",
+   "13.4",
+   "%",
+   "11.0-15.0",
+   "NORMAL"
+  ],
+  [
+   "PLATELET COUNT",
+   "293",
+   "Thousand/uL",
+   "140-400",
+   "NORMAL"
+  ],
+  [
+   "MPV",
+   "10.4",
+   "fL",
+   "7.5-12.5",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE NEUTROPHILS",
+   "3233",
+   "cells/uL",
+   "1500-7800",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE BAND NEUTROPHILS",
+   "DNR",
+   "cells/uL",
+   "0-750",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE METAMYELOCYTES",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE MYELOCYTES",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE PROMYELOCYTES",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE LYMPHOCYTES",
+   "1372",
+   "cells/uL",
+   "850-3900",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE MONOCYTES",
+   "423",
+   "cells/uL",
+   "200-950",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE EOSINOPHILS",
+   "51",
+   "cells/uL",
+   "15-500",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE BASOPHILS",
+   "20",
+   "cells/uL",
+   "0-200",
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE BLASTS",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ],
+  [
+   "ABSOLUTE NUCLEATED RBC",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ],
+  [
+   "NEUTROPHILS",
+   "63.4",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "BAND NEUTROPHILS",
+   "DNR",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "METAMYELOCYTES",
+   "DNR",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "MYELOCYTES",
+   "DNR",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "PROMYELOCYTES",
+   "DNR",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "LYMPHOCYTES",
+   "26.9",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "REACTIVE LYMPHOCYTES",
+   "DNR",
+   "%",
+   "0-10",
+   "NORMAL"
+  ],
+  [
+   "MONOCYTES",
+   "8.3",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "EOSINOPHILS",
+   "1.0",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "BASOPHILS",
+   "0.4",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "BLASTS",
+   "DNR",
+   "%",
+   null,
+   "NORMAL"
+  ],
+  [
+   "NUCLEATED RBC",
+   "DNR",
+   null,
+   null,
+   "NORMAL"
+  ]
+ ],
+ "quest_lipid_panel_sample.pdf": [
+  [
+   "Glucose",
+   "115",
+   "mg/dL",
+   "65-99",
+   "H"
+  ],
+  [
+   "Hemoglobin A1c",
+   "6.1",
+   "% of total Hgb",
+   "<5.7",
+   "H"
+  ],
+  [
+   "Total Cholesterol",
+   "164",
+   "mg/dL",
+   "125-200",
+   null
+  ],
+  [
+   "HDL Cholesterol",
+   "81",
+   "mg/dL",
+   "≥46",
+   null
+  ],
+  [
+   "Triglycerides",
+   "45",
+   "mg/dL",
+   "<150",
+   null
+  ],
+  [
+   "LDL Cholesterol (Calculated)",
+   "74",
+   "mg/dL",
+   "<130",
+   null
+  ],
+  [
+   "Non-HDL Cholesterol",
+   "83",
+   "mg/dL",
+   null,
+   null
+  ],
+  [
+   "Cholesterol/HDL Ratio (Calculated)",
+   "2.0",
+   null,
+   "≤5.0",
+   null
+  ],
+  [
+   "HEIGHT FEET",
+   "5",
+   "ft",
+   null,
+   null
+  ],
+  [
+   "SYSTOLIC BLOOD PRESSURE",
+   "106",
+   "mmHg",
+   null,
+   null
+  ],
+  [
+   "HEIGHT INCHES",
+   "4",
+   "in",
+   null,
+   null
+  ],
+  [
+   "DIASTOLIC BLOOD PRESSURE",
+   "65",
+   "mmHg",
+   null,
+   null
+  ],
+  [
+   "WEIGHT",
+   "150",
+   "lbs",
+   null,
+   null
+  ],
+  [
+   "CALCULATED BMI",
+   "25.7",
+   null,
+   null,
+   null
+  ]
+ ]
+}

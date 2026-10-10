@@ -10,6 +10,23 @@ The hard part is not the chart. It is that `FERRTN SER`, `Ferritin, Serum` and
 µg/L and another in ng/mL, and that being confidently wrong about either is
 worse than admitting you do not know.
 
+## Try it
+
+```bash
+docker compose up --build
+```
+
+Then open <http://localhost:8080> and sign in as `demo@example.com` /
+`labledger-demo-only`. The record holds six generated reports from three
+"labs" across three years, read by the same pipeline an upload goes through:
+ferritin falls from 96 to 18 ng/mL, and the third lab prints it as
+`FERRTN SER` in µg/L, so the names and units reconcile into one line.
+
+Nothing in it is a real person or result. It listens on localhost only,
+generates its own keys on first start, and has no LLM key, so whatever the
+deterministic stages cannot settle is waiting in Review. `docker compose down
+-v` removes it.
+
 ---
 
 ## What it does
@@ -19,7 +36,7 @@ worse than admitting you do not know.
 | | |
 |---|---|
 | **Extract** | `pdfplumber` over the page, table-aware, falling back to line parsing |
-| **Map** | five-stage cascade from exact match to an LLM that may only *pick from a list* |
+| **Map** | six-stage cascade from a confirmed alias to an LLM that may only *pick from a list* |
 | **Convert** | hand-audited unit table per LOINC — deterministic or absent, never guessed |
 | **Range** | the report's own interval when printed; an age- and sex-aware table when not |
 | **Flag** | low / normal / high, plus critical limits and delta checks (below) |
@@ -32,12 +49,26 @@ than narrowing to empty:
 
 1. **Alias** — this user already confirmed what this printed name means. Free,
    deterministic, no network.
-2. **Exact** — the printed name matches a LOINC component outright.
-3. **Related, corroborated** — LOINC's associative `RELATEDNAMES2`, but only
+2. **Curated** — the ~100 printed names real reports use most (metabolic
+   panel, CBC and differential, lipids, HbA1c, common allergy and infectious
+   tests), each code looked up in the seeded LOINC table. Where one name is
+   two tests the printed unit decides: "NEUTROPHILS 63.4 %" is a fraction of
+   leukocytes, "3233 cells/uL" a count; with no unit it declines. Blood and
+   serum only — "GLUCOSE" in a urine panel goes on down the cascade.
+3. **Exact** — the printed name matches a LOINC component outright.
+4. **Related, corroborated** — LOINC's associative `RELATEDNAMES2`, but only
    when a second signal agrees. A related name is *never* identity on its own.
-4. **Narrowed fuzzy** — `rapidfuzz` over a pool narrowed by specimen and unit.
-5. **LLM** — `gemini-3.5-flash`, offered a numbered list and required to return
+5. **Narrowed fuzzy** — `rapidfuzz` over a pool narrowed by specimen and unit.
+6. **LLM** — `gemini-3.5-flash`, offered a numbered list and required to return
    an index. It cannot invent a code, and it is expected to abstain.
+
+Checked against every row of five real Quest and LabCorp sample reports (88
+rows, each verified by hand against the PDF — `backend/tests/fixtures/real_world/`):
+every value, unit and range extracted matches, and offline (no LLM) 81 rows
+map to the right LOINC code with **none wrong** and 7 left for review. Before
+that check, a positive SARS-CoV-2 result read as "NOT DETECTED", and
+creatinine, five differential percentages, HbA1c and body weight mapped to
+the wrong codes. See `PROVENANCE.md` there for the numbers.
 
 Nothing auto-accepts below the confidence floor, and **critical analytes always
 reach a human** when a probabilistic stage decided. Confidence is statistical;
@@ -88,6 +119,19 @@ Every number traces back to the page it came from — the row exactly as printed
 the stage that mapped it, the confidence, the conversion factor, and where the
 reference interval came from. A resolved value the user cannot trace is not
 finished work.
+
+### Leaving with your data
+
+`/api/observations/{patient}/fhir` returns the whole record as a **FHIR R4**
+bundle, and the Record screen downloads it. Every row goes out. A value
+travels in the same unit as the range it was judged against; a row still
+awaiting review is marked `preliminary` and carries the printed name only,
+because a LOINC code in an export reads as a fact to whatever imports it.
+The download is written to the access log.
+
+`/privacy` in the app states what is stored, what is encrypted, and the one
+thing that can leave the server (a test's printed name, unit and specimen,
+never its value) in plain language.
 
 ---
 
@@ -192,17 +236,18 @@ backend/app/
   worker.py        arq job: extract -> map -> finalise
   pipeline/
     extract.py     PDF -> rows
-    mapping.py     the five-stage cascade
+    mapping.py     the mapping cascade
     units.py       hand-audited conversion table
     ranges.py      age- and sex-aware reference intervals
     flags.py       critical limits and delta checks
     insights.py    statements about a series
     llm.py         Gemini, index-only answers
+    fhir.py        FHIR R4 export
   routers/         auth, patients, documents, observations, review, audit
 frontend/src/
   api/client.js    token in a closure, single-flight refresh
   auth/            session state, idle lock
-  screens/         Trends, Reports, Upload, Review, Record, Security, Invite
+  screens/         Trends, Reports, Upload, Review, Record, Security, Invite, Privacy
   components/      Select, Modal, IntervalRail
   styles/tokens.css   the design system
 ```
@@ -215,7 +260,7 @@ frontend/src/
 cd backend && .venv/bin/python -m pytest -q
 ```
 
-394 tests. They run against a real MongoDB (`labledger_test`) rather than
+420 tests. They run against a real MongoDB (`labledger_test`) rather than
 mocks, because the things worth testing here are queries and indexes —
 `test_extract.py`, `test_real_world.py` and `test_totp_vectors.py` are the
 exceptions, calling pure functions directly with no database needed.
@@ -259,7 +304,7 @@ category of work:
 
 | | What it needs |
 |---|---|
-| **EHR integration** | HL7 v2 / FHIR against an interface engine. Nobody uploads PDFs on a ward. |
+| **EHR integration** | HL7 v2 / FHIR against an interface engine. The FHIR export is a file a person downloads, not an interface. Nobody uploads PDFs on a ward. |
 | **Clinical validation** | Measured sensitivity and specificity per analyte against a clinician-adjudicated gold set. |
 | **Critical limits** | The shipped table is *illustrative adult values*. A deployment replaces it with limits its own laboratory director has signed. |
 | **Regulatory** | The reviewable-basis boundary must be re-checked whenever interface copy changes. |

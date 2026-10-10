@@ -50,11 +50,16 @@ async def test_an_analyte_with_nothing_chartable_is_still_returned(client, accou
     h, pid = await loaded(client, account)
 
     # Everything awaiting review is excluded from a chart by the same rule the
-    # single-analyte series uses, so a fresh document has such rows.
-    d = (await client.get(f"/api/observations/{pid}/panel-trends?panel=cbc",
-                          headers=h)).json()
+    # single-analyte series uses. Put one analyte there explicitly: which rows
+    # a fresh document leaves pending changes as the cascade improves.
+    url = f"/api/observations/{pid}/panel-trends?panel=cbc"
+    code = (await client.get(url, headers=h)).json()["tracks"][0]["loinc_code"]
+    await Observation.find(Observation.loinc_code == code).update(
+        {"$set": {"review_status": "pending"}})
+
+    d = (await client.get(url, headers=h)).json()
     empty = [t for t in d["tracks"] if not t["points"]]
-    assert empty, "the fixture leaves some CBC rows pending review"
+    assert [t["loinc_code"] for t in empty] == [code]
     for t in empty:
         assert t["excluded"] > 0, f"{t['loinc_code']} vanished without saying why"
 

@@ -24,12 +24,33 @@ instead of a column gap, and a "Class N" severity column with no numeric
 range at all. Real formatting is messier than the two synthetic fixtures in
 `tests/test_extract.py` -- that's the point of having both.
 
-## Measured coverage (this corpus, current extractor)
+## Measured accuracy (this corpus, current extractor)
 
-Run `pytest tests/test_real_world.py -v` to reproduce. As of the last
-extraction-accuracy pass: 85 rows extracted across the 6 files, 100% with a
-value, 74% with a flag, 68% with a unit, 40% with a reference range. The
-reference-range gap is mostly `labcorp_607016` (a "Class 0"/"Class III"
-severity label, not a number, so there is nothing to extract) and a few
-computed/ratio rows Quest prints without republishing a range. See
-`ARCHITECTURE.md` for what's still a known gap rather than a bug.
+`expected.json` holds every row of the five readable reports -- 88 rows --
+checked by hand against the PDF text: name, value, unit, reference range,
+flag. `test_every_value_unit_and_range_matches_the_printed_report` requires
+an exact match, and `tests/test_mapping.py::REAL_ROWS` pins the LOINC code
+for the rows most likely to be mapped wrong.
+
+| | before the hand check | now |
+|---|---|---|
+| rows extracted | 85 | 88 (+ the "Component / Result / Component / Result" vitals pairs) |
+| values that are wrong | **4** | 0 |
+| rows with a unit | 58 (68%) | 75 (85%) |
+| rows with a reference range | 34 (40%) | 48 (55%) |
+| rows mapped to a LOINC code, offline | 30, **at least 8 wrong** | 81, **0 wrong** (7 left for review) |
+
+The four wrong values were the reason to stop counting rows: a positive
+SARS-CoV-2 result ("Detected Abnormal") and an indeterminate one read as
+**NOT DETECTED** -- the reference column taken for the value -- and a
+BUN/creatinine ratio ("NOT APPLICABLE NORMAL") read as its lab-site code
+"01". The wrong mappings: creatinine to the *urine* code, five differential
+percentages to absolute-count codes, HbA1c in % to a mass concentration,
+nucleated RBCs to spinal fluid, and body weight to the weight of a kidney
+stone. `app/data/common_tests.py` -- every code looked up in the seeded
+LOINC table -- fixes those; vital signs, which that table doesn't cover,
+go to review instead of being mapped to anything.
+
+The remaining range gap is mostly `labcorp_607016` (a "Class 0"/"Class III"
+severity grade, not a number) and Quest differential rows that print no
+range.

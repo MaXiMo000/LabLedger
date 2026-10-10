@@ -539,7 +539,9 @@ function Activity({ patientId }) {
               <span className="trailrow__at num">{when(r.at)}</span>
               <span className="trailrow__who num">{r.actor_email}</span>
               <span className="trailrow__what">
-                {ACTION_WORDS[r.action] ?? r.action} {r.resource}
+                {r.action === "download" && r.resource === "observation"
+                  ? "exported the results (FHIR)"
+                  : `${ACTION_WORDS[r.action] ?? r.action} ${r.resource}`}
               </span>
               <span className="trailrow__ip num">{r.ip ?? ""}</span>
             </li>
@@ -553,6 +555,38 @@ function Activity({ patientId }) {
           not reachable from this screen.
         </p>
       )}
+    </section>
+  );
+}
+
+function Export({ patientId }) {
+  const [error, setError] = useState(null);
+  const save = useMutation({
+    mutationFn: () => api.get(`/observations/${patientId}/fhir`, { responseType: "blob" }),
+    onSuccess: ({ data }) => {
+      const url = URL.createObjectURL(data);
+      const a = Object.assign(document.createElement("a"), { href: url, download: "labledger-fhir.json" });
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    onError: (e) => setError(messageFor(e)),
+  });
+
+  return (
+    <section className="rec__block">
+      <div className="rec__head">
+        <h2 className="rec__h">Take this record with you</h2>
+        <button className="rec__edit" onClick={() => { setError(null); save.mutate(); }}
+                disabled={save.isPending}>
+          {save.isPending ? "Preparing…" : "Download as FHIR"}
+        </button>
+      </div>
+      <p className="rec__hint">
+        Every result as a FHIR R4 bundle, the format hospital systems and health
+        apps exchange. Results still awaiting review go out marked preliminary,
+        with the name as printed and no code. The download is recorded below.
+      </p>
+      {error && <p className="field__error" role="alert">{error}</p>}
     </section>
   );
 }
@@ -575,6 +609,7 @@ export default function Record() {
       </header>
 
       <Demographics patient={active} canEdit={isOwner} />
+      <Export patientId={active.id} />
 
       {isOwner ? (
         <>

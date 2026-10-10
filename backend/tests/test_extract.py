@@ -132,3 +132,12 @@ def test_extract_raises_typed_error_on_unreadable_bytes():
     """Callers need to distinguish "bad PDF" from a bug in the extractor."""
     with pytest.raises(UnreadablePDFError):
         extract(b"this is not a pdf")
+
+
+def test_short_analyte_names_are_rows_and_stray_flags_are_not():
+    """ "K" and "A1C" are how some labs print potassium and HbA1c. Both were
+    dropped without a trace: one for being a single letter, the other for
+    having no two letters in a row."""
+    names = [parse_line(f"{n}      4.1      mmol/L      3.5-5.2", 1, 1, None)
+             for n in ("K", "A1C", "H", "7")]
+    assert [r.raw_name if r else None for r in names] == ["K", "A1C", None, None]

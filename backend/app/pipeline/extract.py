@@ -68,7 +68,7 @@ class ExtractResult:
 # measured on a real Quest report), so it is only a reference range once a
 # value already exists on the row; see the ref-vs-value split below.
 RE_RANGE_DASH = re.compile(r"^(?:[\d.]+\s*[-–—]\s*[\d.]+|[\d.]+\s*[-–—]\s*)$")
-RE_RANGE_CMP = re.compile(r"^[<>≤≥]\s*[\d.]+$")
+RE_RANGE_CMP = re.compile(r"^[<>≤≥]=?\s*[\d.]+$")
 RE_RANGE = re.compile(f"(?:{RE_RANGE_DASH.pattern}|{RE_RANGE_CMP.pattern})")
 RE_NUMBER = re.compile(r"^[<>≤≥]?\s*-?[\d,]+\.?\d*$")
 RE_FLAG = re.compile(r"^(H|L|HH|LL|A|AB|N|HIGH|LOW|ABNORMAL|CRITICAL)$", re.IGNORECASE)
@@ -156,11 +156,50 @@ def detect_specimen(line: str) -> str | None:
     return None
 
 
+# Real report conventions, all measured on Quest's lipid sample report:
+# a table cell carries a "See Note 1" line under the range; "> OR = 46"
+# is how Quest prints >=46; "(calc)" marks a calculated row.
+_SEE_NOTE = re.compile(r"\bsee note\s*\d+\b", re.IGNORECASE)
+_CALC = re.compile(r"\(\s*calc(?:ulated)?\s*\)", re.IGNORECASE)
+_OR_EQUAL = [(re.compile(r">\s*OR\s*=\s*", re.IGNORECASE), "≥"),
+             (re.compile(r"<\s*OR\s*=\s*", re.IGNORECASE), "≤")]
+
+
+def _plausible_name(name: str) -> bool:
+    """Tell a test name from a stray token in the name column.
+
+    Two letters anywhere, not two in a row: "A1C" is a name. One letter is a
+    flag ("H", "L") except for potassium, which some labs print as "K".
+    """
+    return len(name) <= 60 and (name.upper() == "K" or len(re.findall(r"[A-Za-z]", name)) >= 2)
+
+
+def clean_token(tok: str) -> str:
+    t = " ".join(line for line in tok.splitlines() if not _SEE_NOTE.fullmatch(line.strip()))
+    t = _CALC.sub(" ", t)
+    for pattern, symbol in _OR_EQUAL:
+        t = pattern.sub(symbol, t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _split_range_unit(t: str) -> tuple[str, str] | None:
+    """"65-99 mg/dL" or "<5.7 % of total Hgb": a range followed by a unit,
+    which may be several words. The range is the shortest leading run of
+    words that is a range; the rest must look like a unit."""
+    words = t.split(" ")
+    for k in range(1, min(len(words), 4)):
+        left, right = " ".join(words[:k]), " ".join(words[k:])
+        if (RE_RANGE.match(left.replace(" ", "")) and len(right) <= 24
+                and UNIT_HINT.search(right) and not RE_NUMBER.match(right)):
+            return left.replace(" ", ""), right
+    return None
+
+
 def classify_tokens(tokens: list[str]) -> tuple[str | None, str | None, str | None, str | None]:
     """-> (value, unit, ref_range, flag). Order-independent."""
     value = unit = ref = flag = None
     for tok in tokens:
-        t = tok.strip()
+        t = clean_token(tok)
         if not t:
             continue
         # A tight real-world column sometimes prints "65-99 mg/dL" as one
@@ -168,10 +207,9 @@ def classify_tokens(tokens: list[str]) -> tuple[str | None, str | None, str | No
         # tokenizer splits columns on) -- measured on a real Quest report.
         # Split range from unit before the whole-token RE_RANGE check,
         # which would otherwise never match the trailing unit text.
-        if ref is None and " " in t:
-            left, _, right = t.rpartition(" ")
-            if (RE_RANGE.match(left) and not (RE_RANGE_CMP.match(left) and value is None)
-                    and RE_UNIT.match(right) and UNIT_HINT.search(right)):
+        if ref is None and " " in t and (split := _split_range_unit(t)):
+            left, right = split
+            if not (RE_RANGE_CMP.match(left) and value is None):
                 ref = left
                 if unit is None:
                     unit = right
@@ -206,6 +244,31 @@ def classify_tokens(tokens: list[str]) -> tuple[str | None, str | None, str | No
                 if flag is None:
                     flag = right.upper()
                 continue
+        # A qualitative result glued to its flag: "Detected Abnormal" --
+        # LabCorp's SARS-CoV-2 sample. Unrecognised, the value stayed empty
+        # and the next column -- the *reference* value, "Not Detected" --
+        # was read as the result: a positive test reported as negative.
+        if value is None and " " in t:
+            words = t.upper().split(" ")
+            for k in range(len(words) - 1, 0, -1):
+                head, tail = " ".join(words[:k]), " ".join(words[k:])
+                # "NORMAL" too: Quest's "NOT APPLICABLE NORMAL" left the ratio's
+                # value empty and its lab-site code ("01") was read as it.
+                if head in QUALITATIVE and (RE_FLAG.match(tail) or tail == "NORMAL"):
+                    value, flag = head, flag or tail
+                    break
+            if value is not None:
+                continue
+        # And value glued to its unit: "106 mmHg", "150 lbs" -- Quest's
+        # "Personal factors" table prints them that way.
+        if value is None and " " in t:
+            left, _, right = t.partition(" ")
+            if (RE_NUMBER.match(left) and RE_UNIT.match(right)
+                    and (UNIT_HINT.search(right) or right in {"ft", "in", "lbs", "kg", "cm"})):
+                value = left.replace(",", "")
+                if unit is None:
+                    unit = right
+                continue
         if value is None and RE_NUMBER.match(t.replace(" ", "")):
             value = t.replace(",", "").replace(" ", "")
             continue
@@ -213,10 +276,15 @@ def classify_tokens(tokens: list[str]) -> tuple[str | None, str | None, str | No
             value = t.upper()
             continue
         # Require a unit-ish shape so stray words don't become units.
-        if (unit is None and RE_UNIT.match(t) and not RE_NUMBER.match(t)
+        if (unit is None and (RE_UNIT.match(t) or (len(t) <= 24 and t[:1] in "%µμ"))
+                and not RE_NUMBER.match(t)
                 and (UNIT_HINT.search(t) or t in {"pH", "ratio", "index"})):
             unit = t
             continue
+    # Quest prints a performing-site code ("01") after the unit; glued on, it
+    # made "g/dL 01" and "Thousand/uL 01", which no unit table knows.
+    if unit:
+        unit = re.sub(r"\s+\d{1,3}$", "", unit) or None
     return value, unit, ref, flag
 
 
@@ -229,7 +297,7 @@ def parse_line(line: str, page: int, line_no: int, specimen: str | None) -> RawR
     if not m:
         return None
     name = re.sub(r"\s+", " ", m.group("name")).strip(" .:-")
-    if not (2 <= len(name) <= 60) or not re.search(r"[A-Za-z]{2}", name):
+    if not _plausible_name(name):
         return None
 
     rest = m.group("rest")
@@ -262,14 +330,23 @@ def _rows_from_tables(pdf) -> list[RawRow]:
                     continue
                 if RE_NOISE.match(joined):
                     continue
-                name, rest = cells[0], cells[1:]
-                name = re.sub(r"\s+", " ", name).strip(" .:-")
-                if not (2 <= len(name) <= 60) or not re.search(r"[A-Za-z]{2}", name):
-                    continue
-                value, unit, ref, flag = classify_tokens(rest)
-                if value is None:
-                    continue
-                rows.append(RawRow(name, value, unit, ref, specimen, flag, pno, line_no))
+                # "Component | Result | Component | Result": two results per
+                # row -- Quest's "Personal factors" table; the second pair
+                # (blood pressure) used to be dropped.
+                header = [(c or "").strip().lower() for c in table[0]]
+                half = len(header) // 2
+                pairs = ([cells[:half], cells[half:]]
+                         if len(header) % 2 == 0 and half >= 2 and header[:half] == header[half:]
+                         else [cells])
+                for pair in pairs:
+                    name, rest = pair[0], pair[1:]
+                    name = re.sub(r"\s+", " ", name).strip(" .:-")
+                    if not _plausible_name(name):
+                        continue
+                    value, unit, ref, flag = classify_tokens(rest)
+                    if value is None:
+                        continue
+                    rows.append(RawRow(name, value, unit, ref, specimen, flag, pno, line_no))
     return rows
 
 

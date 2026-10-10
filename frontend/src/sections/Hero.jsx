@@ -47,6 +47,7 @@ export default function Hero() {
               See how it resolves
               <span className="btn__arrow" aria-hidden="true">↓</span>
             </a>
+            <a className="btn btn--quiet" href="/privacy">What happens to your data</a>
           </div>
         </div>
 

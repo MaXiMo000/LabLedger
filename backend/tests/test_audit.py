@@ -5,6 +5,7 @@ than no log, because it implies a completeness it does not have. So the main
 test walks the whole clinical API surface and asserts every call left a trace.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -126,6 +127,9 @@ async def test_the_log_holds_no_clinical_content(client):
         f"{e.action} {e.resource} {e.resource_id or ''}"
         for e in await AuditEntry.find().to_list()
     )
+    # Database ids are random hex and are allowed here; one containing "18"
+    # is not the ferritin value.
+    blob = re.sub(r"[0-9a-f]{24}", "", blob)
     for leak in ("FERRITIN", "ng/mL", "Quest", "q.pdf", "SERUM", "18"):
         assert leak not in blob, f"audit log leaked {leak!r}"
 

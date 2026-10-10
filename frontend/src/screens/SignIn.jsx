@@ -208,6 +208,9 @@ export default function SignIn() {
               {creating ? "Sign in" : "Create one"}
             </button>
           </p>
+          <p className="signin__switch">
+            <Link to="/privacy" className="signin__toggle">What happens to your reports</Link>
+          </p>
         </div>
 
         {/* The right column is the product, not an illustration of it: three
