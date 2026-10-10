@@ -3,6 +3,7 @@
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app import repo
@@ -14,7 +15,7 @@ from app.models.document import LabDocument
 from app.models.loinc import LoincEntry
 from app.models.observation import Observation
 from app.models.user import User
-from app.pipeline import flags
+from app.pipeline import fhir, flags
 from app.pipeline.derived import derive
 from app.pipeline.insights import analyse
 from app.security import decrypt_str
@@ -638,6 +639,28 @@ async def panels(
     # Out-of-range analytes first: those are what the user opened the app for.
     out.sort(key=lambda p: (p.latest_flag in ("normal", "unknown"), p.display or ""))
     return out
+
+
+@router.get("/{patient_id}/fhir")
+async def fhir_export(patient_id: str, user: User = Depends(current_user)):
+    """Return the whole record as a FHIR R4 Bundle, to take to another system.
+
+    Every row goes out, including the ones no chart shows: an export that
+    quietly held back the unmapped and the unreviewed would be a different
+    record from the one stored. See `pipeline/fhir.py` for what is and is not
+    asserted about each.
+    """
+    patient, q = await repo.patient_observations(user, patient_id)
+    rows = await q.sort(*_CHART_ORDER).to_list()
+    dob_raw = decrypt_str(patient.dob_enc)
+    body = fhir.bundle(
+        str(patient.id), patient.display_name,
+        date.fromisoformat(dob_raw) if dob_raw else None,
+        decrypt_str(patient.sex_at_birth_enc), rows,
+    )
+    await record("download", "observation", patient_id=patient.id)
+    return JSONResponse(body, media_type="application/fhir+json", headers={
+        "Content-Disposition": 'attachment; filename="labledger-fhir.json"'})
 
 
 # Declared last on purpose: this path parameter would otherwise capture the
