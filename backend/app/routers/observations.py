@@ -537,7 +537,7 @@ async def panel_trends(
 
     **Small multiples, not one overlaid plot.** The obvious design is to
     normalise each analyte to its reference interval so they can share a value
-    axis. That was the plan and it is wrong: it invents a common scale for
+    axis. That is wrong: it invents a common scale for
     quantities that have none, and putting potassium and cholesterol on one
     axis invites reading the height of one against the other. It also fails
     where the data already fails — a one-sided interval (`<5.7` for HbA1c) has

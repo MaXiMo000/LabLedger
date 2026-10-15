@@ -375,7 +375,7 @@ async def search(
     Rank 0 means "never observed in the frequency survey", not "most common", so
     those are a separate second pass rather than the front of the first.
 
-    ponytail: regex cannot use an index, so latency scales with how far the walk
+    Regex cannot use an index, so latency scales with how far the walk
     goes before finding `limit` matches -- typically under 200ms, worse for a
     two-letter query that matches little. A prefix-token array field with its own
     index is the fix if this ever gets slow enough to notice.

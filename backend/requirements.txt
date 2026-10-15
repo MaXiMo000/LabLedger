@@ -10,7 +10,7 @@ cryptography==44.0.0
 python-multipart==0.0.20
 slowapi==0.1.9
 
-# phase 2+ (installed now so the venv is stable)
+# background jobs
 arq==0.26.3
 redis==5.2.1
 pdfplumber==0.11.5

@@ -1,5 +1,7 @@
 # LabLedger
 
+[![ci](https://github.com/MaXiMo000/LabLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/MaXiMo000/LabLedger/actions/workflows/ci.yml)
+
 Upload a lab PDF from any laboratory. LabLedger reads the rows, resolves each
 test to a **LOINC** code, converts the units, resolves the reference interval,
 and charts the trend. Anything it is not certain about goes to a human, and
@@ -9,6 +11,10 @@ The hard part is not the chart. It is that `FERRTN SER`, `Ferritin, Serum` and
 `FERRITIN` are the same test printed three ways, that one lab reports it in
 µg/L and another in ng/mL, and that being confidently wrong about either is
 worse than admitting you do not know.
+
+<p align="center"><img src="docs/results.png" alt="Results: twenty tests tracked, each resolved to a LOINC code and placed against its reference range" width="100%"></p>
+
+<p align="center"><img src="docs/review.png" alt="Review queue: a loosely matched creatinine row waiting for a person to confirm its LOINC code" width="100%"></p>
 
 ## Try it
 

@@ -321,39 +321,3 @@ cd backend && .venv/bin/python scripts/make_sample_reports.py
 Six reports, three labs, three years, one fictional person. Ferritin falls from
 96 to 18 ng/mL across them, and one lab prints it as `FERRTN SER` in µg/L — so
 you can watch names and units reconcile onto a single line.
-
-### Provenance mobile layout — now actually verified
-
-Previously reviewed by reading the CSS only, never loaded with real data on
-an actual narrow viewport. Checked properly this session: disposable local
-Mongo + Redis in Docker, dummy JWT/encryption secrets, no Gemini key, none of
-it touching the real `.env` (whose Redis and EmailJS are shared with another
-deployment) — a real account, a real upload of one of the Quest/LabCorp
-fixtures from `backend/tests/fixtures/real_world/`, resized to a 375px
-viewport. `Provenance.css`'s `max-width: 640px` rules held exactly as
-documented: full-width panel (`width: 375px`, `border: 0px none`), and the
-printed line wraps rather than truncating (`white-space: normal`,
-`grid-column: 1 / -1`, confirmed via computed style against a real rendered
-node, not just read from source).
-
-Two real bugs turned up in the process of getting far enough to check this,
-both fixed:
-
-- **A brand-new account had no way to create its first record.** Every
-  screen waits on an active patient (`usePatient()`'s `activeId`), and the
-  only "Add a record" control lived inside `PatientSwitcher`, which
-  rendered nothing at all (`if (!active) return null`) precisely when there
-  were zero records to switch between — a first-run dead end nobody could
-  click through. Fixed: the switcher now renders a standalone "Add a
-  record" button when there's no active patient yet, instead of vanishing.
-- **The footer's source filename still hard-truncated on mobile** — the same
-  `Provenance.css` file, one selector down (`.prov__foot .prov__file`), had
-  never gotten the same wrap-not-truncate treatment as the printed line
-  above it. Found live (a real filename actually being cut off with `…`),
-  fixed the same way: wraps (`word-break: break-all`, since a filename has
-  no spaces to wrap on) instead of hiding half the evidence.
-
-No component-test framework exists in this codebase (`vitest` only covers
-pure logic, no `@testing-library/react`) — adding one for a single fix would
-be new infrastructure disproportionate to what broke, so this stays verified
-by the live check above rather than by a new automated test.

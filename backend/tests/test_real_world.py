@@ -37,7 +37,7 @@ def test_extracts_rows_from_real_world_sample(name, min_rows):
 
 
 def test_every_row_across_the_corpus_has_a_value():
-    """Regression guard for the class of bug this session fixed: a stray
+    """Regression guard for a class of bug: a stray
     column number (a sequence marker, a specimen code) getting misread as
     the result's value whenever the real value token didn't classify.
     Measured 100% value coverage across all 6 real fixtures after the
